@@ -6,6 +6,7 @@ import com.datct.datn.modules.lecturer.DTO.UpdateLecturerRequest;
 import com.datct.datn.modules.lecturer.entity.Lecturer;
 import com.datct.datn.modules.lecturer.repository.LecturerRepository;
 import com.datct.datn.modules.user.entity.Department;
+import com.datct.datn.modules.user.entity.Role;
 import com.datct.datn.modules.user.entity.User;
 import com.datct.datn.modules.user.repository.DepartmentRepository;
 import com.datct.datn.modules.user.repository.UserRepository;
@@ -63,7 +64,7 @@ public class LecturerService {
                 request.getPassword()
         );
 
-        user.setRole("LECTURER");
+        user.setRole(Role.valueOf("TEACHER"));
 
         User savedUser =
                 userRepository.save(user);

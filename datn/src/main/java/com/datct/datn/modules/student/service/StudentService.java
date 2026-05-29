@@ -5,6 +5,7 @@ import com.datct.datn.modules.student.DTO.StudentResponse;
 import com.datct.datn.modules.student.entity.Student;
 import com.datct.datn.modules.student.repository.StudentRepository;
 import com.datct.datn.modules.user.entity.Department;
+import com.datct.datn.modules.user.entity.Role;
 import com.datct.datn.modules.user.entity.User;
 import com.datct.datn.modules.user.repository.DepartmentRepository;
 import com.datct.datn.modules.user.repository.UserRepository;
@@ -42,7 +43,7 @@ public class StudentService {
         user.setFullName(request.getFullName());
         user.setEmail(request.getEmail());
         user.setPassword(request.getPassword());
-        user.setRole("STUDENT");
+        user.setRole(Role.valueOf("STUDENT"));
 
         User savedUser = userRepository.save(user);
 
