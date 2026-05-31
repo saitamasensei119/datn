@@ -32,7 +32,7 @@ const Login: React.FC = () => {
       const role = decoded.role.replace('ROLE_', '');
 
       if (role === 'ADMIN') {
-        navigate('/admin/departments');
+        navigate("/admin/dashboard");
       } else if (role === 'TEACHER') {
         navigate('/teacher/courses');
       } else {

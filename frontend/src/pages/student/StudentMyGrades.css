@@ -1,0 +1,162 @@
+.page-container {
+  padding: 20px;
+}
+
+.page-header {
+  margin-bottom: 30px;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 24px;
+  color: var(--text-primary);
+}
+
+.gpa-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.gpa-card {
+  padding: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.gpa-label {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.gpa-value {
+  margin: 0 0 5px;
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.gpa-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.grades-section {
+  margin-bottom: 30px;
+}
+
+.section-title {
+  margin: 0 0 15px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.grades-table {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.grades-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-secondary);
+}
+
+.grades-table th {
+  padding: 12px;
+  background: var(--bg-primary);
+  border-bottom: 2px solid var(--border-color);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.grades-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.course-code {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.course-name {
+  font-weight: 500;
+}
+
+.lecturer {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.credits {
+  text-align: center;
+  font-weight: 600;
+}
+
+.score {
+  text-align: center;
+}
+
+.total-score {
+  text-align: center;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.grade-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.scale-info {
+  background: var(--bg-secondary);
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.scale-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.scale-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.scale-grade {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.scale-range {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
