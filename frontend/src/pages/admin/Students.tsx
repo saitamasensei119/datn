@@ -24,6 +24,7 @@ interface StudentProfile {
   email: string;
   departmentName: string;
   departmentId?: number;
+  status?: string;
 }
 
 const Students: React.FC = () => {
@@ -38,10 +39,14 @@ const Students: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [students, setStudents] = useState<StudentProfile[]>([]);
+  const [showAllStudents, setShowAllStudents] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"create" | "edit">("create");
+  const [selectedStatus, setSelectedStatus] = useState<string>("ACTIVE");
+  const [statusChangeId, setStatusChangeId] = useState<number | null>(null);
 
   // Form Fields
   const [fullName, setFullName] = useState("");
@@ -53,11 +58,24 @@ const Students: React.FC = () => {
   useEffect(() => {
     const fetchDepts = async () => {
       try {
-        const response = await departmentApi.getAll();
-        setDepartments(response.data);
+        const [deptRes, studRes] = await Promise.all([
+          departmentApi.getAll(),
+          studentApi.getAll(),
+        ]);
+        setDepartments(deptRes.data);
+        setStudents(
+          studRes.data.map((s: any) => ({
+            id: s.id,
+            studentCode: s.studentCode,
+            fullName: s.fullName,
+            email: s.email,
+            departmentName: s.departmentName || "Chưa có",
+            status: s.status || "ACTIVE",
+          })),
+        );
       } catch (err: any) {
         console.error(err);
-        setError("Không thể tải danh sách khoa.");
+        setError("Không thể tải danh sách.");
       } finally {
         setLoading(false);
       }
@@ -88,6 +106,7 @@ const Students: React.FC = () => {
         email: s.email || s.user?.email || "",
         departmentName: deptName,
         departmentId: deptId,
+        status: s.status || "ACTIVE",
       });
     } catch (err: any) {
       console.error(err);
@@ -108,22 +127,60 @@ const Students: React.FC = () => {
     setError("");
   };
 
-  const openEditModal = () => {
-    if (!searchedStudent) return;
-    setModalType("edit");
-    setFullName(searchedStudent.fullName);
-    setEmail(searchedStudent.email);
-    setPassword("");
-    setStudentCode(searchedStudent.studentCode);
-    setDepartmentId(searchedStudent.departmentId?.toString() || "");
-    setIsModalOpen(true);
-    setError("");
+  const handleStatusChange = async (studentId: number, newStatus: string) => {
+    try {
+      await studentApi.changeStatus(studentId, newStatus);
+      setSuccess("Cập nhật trạng thái sinh viên thành công!");
+      if (searchedStudent?.id === studentId) {
+        setSearchedStudent({ ...searchedStudent, status: newStatus });
+      }
+      setStudents(
+        students.map((s) =>
+          s.id === studentId ? { ...s, status: newStatus } : s,
+        ),
+      );
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setError(
+        err.response?.data?.message || "Có lỗi xảy ra khi cập nhật trạng thái.",
+      );
+    }
   };
+
+  const openStatusModal = (student: StudentProfile) => {
+    setSelectedStatus(student.status || "ACTIVE");
+    setStatusChangeId(student.id);
+  };
+
+  const closeStatusModal = () => {
+    setStatusChangeId(null);
+  };
+
+  const confirmStatusChange = async () => {
+    if (statusChangeId !== null) {
+      await handleStatusChange(statusChangeId, selectedStatus);
+      closeStatusModal();
+    }
+  };
+  
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setError("");
   };
+  const openEditModal = () => {
+  if (!searchedStudent) return;
+
+  setModalType("edit");
+  setFullName(searchedStudent.fullName);
+  setEmail(searchedStudent.email);
+  setPassword("");
+  setStudentCode(searchedStudent.studentCode);
+  setDepartmentId(searchedStudent.departmentId?.toString() || "");
+  setIsModalOpen(true);
+  setError("");
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,6 +223,7 @@ const Students: React.FC = () => {
           email: response.data.email,
           departmentName: response.data.departmentName || "Chưa có",
           departmentId: Number(departmentId),
+          status: response.data.status || "ACTIVE",
         });
       } else if (modalType === "edit" && searchedStudent !== null) {
         const payload = {
@@ -186,6 +244,7 @@ const Students: React.FC = () => {
           departmentName:
             departments.find((d) => d.id === Number(departmentId))?.name ||
             "Chưa có",
+          status: searchedStudent.status || "ACTIVE",
         });
       }
       setIsModalOpen(false);
@@ -235,25 +294,6 @@ const Students: React.FC = () => {
         )}
 
         {/* Info notice about current API constraints */}
-        <div
-          style={{
-            padding: "1rem",
-            backgroundColor: "var(--primary-light)",
-            border: "1px solid rgba(99, 102, 241, 0.2)",
-            borderRadius: "var(--radius-md)",
-            color: "var(--text-secondary)",
-            fontSize: "0.875rem",
-            marginBottom: "1.5rem",
-            textAlign: "left",
-          }}
-        >
-          💡 <strong>Thông tin hệ thống:</strong> Vì các tính năng lấy danh sách
-          toàn bộ sinh viên (`getAll`) và xóa sinh viên (`delete`) hiện chưa
-          được mở trên máy chủ backend của bạn, bạn có thể thực hiện{" "}
-          <strong>Thêm sinh viên mới</strong> (nút ở trên) hoặc{" "}
-          <strong>Tra cứu sinh viên cụ thể theo mã ID</strong> bằng hộp tìm kiếm
-          bên dưới.
-        </div>
 
         <div
           className="details-grid"
@@ -350,13 +390,34 @@ const Students: React.FC = () => {
                 <GraduationCap size={22} style={{ color: "var(--primary)" }} />
                 <span>Hồ sơ Sinh viên #{searchedStudent.id}</span>
               </h3>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={openEditModal}
-              >
-                <Edit2 size={14} />
-                <span>Chỉnh sửa</span>
-              </button>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={openEditModal}
+                >
+                  <Edit2 size={14} />
+                  <span>Chỉnh sửa</span>
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => openStatusModal(searchedStudent)}
+                  title="Thay đổi trạng thái"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    style={{ marginRight: "4px" }}
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 8v4M12 16h.01" />
+                  </svg>
+                  Trạng thái
+                </button>
+              </div>
             </div>
 
             <div
@@ -392,7 +453,137 @@ const Students: React.FC = () => {
                   {searchedStudent.departmentName}
                 </div>
               </div>
+
+              <div className="detail-item">
+                <div className="detail-label">Trạng thái</div>
+                <div className="detail-value">
+                  <span
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      backgroundColor:
+                        searchedStudent.status === "ACTIVE"
+                          ? "#c8e6c9"
+                          : searchedStudent.status === "SUSPENDED"
+                            ? "#ffcccc"
+                            : searchedStudent.status === "DROPPED_OUT"
+                              ? "#ffe0b2"
+                              : "#e8f5e9",
+                      color:
+                        searchedStudent.status === "ACTIVE"
+                          ? "#2e7d32"
+                          : searchedStudent.status === "SUSPENDED"
+                            ? "#c62828"
+                            : searchedStudent.status === "DROPPED_OUT"
+                              ? "#e65100"
+                              : "#1b5e20",
+                      fontWeight: "500",
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    {searchedStudent.status === "ACTIVE"
+                      ? "Đang học"
+                      : searchedStudent.status === "SUSPENDED"
+                        ? "Tạm ngừng"
+                        : searchedStudent.status === "DROPPED_OUT"
+                          ? "Thôi học"
+                          : "Tốt nghiệp"}
+                  </span>
+                </div>
+              </div>
             </div>
+          </div>
+        )}
+
+        {/* All Students List */}
+        {!searchedStudent && showAllStudents && (
+          <div className="table-container" style={{ marginTop: "2rem" }}>
+            <h3 style={{ marginBottom: "1rem" }}>Danh sách tất cả sinh viên</h3>
+            {students.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "2rem" }}>
+                Chưa có sinh viên nào
+              </div>
+            ) : (
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: "100px" }}>Mã SV</th>
+                    <th>Họ tên</th>
+                    <th>Email</th>
+                    <th style={{ width: "110px", textAlign: "center" }}>Trạng thái</th>
+                    <th style={{ width: "100px", textAlign: "center" }}>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.map((s) => (
+                    <tr key={s.id}>
+                      <td style={{ fontWeight: "600", color: "var(--primary)" }}>
+                        {s.studentCode}
+                      </td>
+                      <td>{s.fullName}</td>
+                      <td>{s.email}</td>
+                      <td style={{ textAlign: "center", fontSize: "0.85rem" }}>
+                        <span
+                          style={{
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            backgroundColor:
+                              s.status === "ACTIVE"
+                                ? "#c8e6c9"
+                                : s.status === "SUSPENDED"
+                                  ? "#ffcccc"
+                                  : "#e8f5e9",
+                            color:
+                              s.status === "ACTIVE"
+                                ? "#2e7d32"
+                                : s.status === "SUSPENDED"
+                                  ? "#c62828"
+                                  : "#1b5e20",
+                          }}
+                        >
+                          {s.status === "ACTIVE"
+                            ? "Đang học"
+                            : s.status === "SUSPENDED"
+                              ? "Tạm ngừng"
+                              : "Tốt nghiệp"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <button
+                          className="btn-icon-only delete"
+                          onClick={() => openStatusModal(s)}
+                          title="Thay đổi trạng thái"
+                          style={{ fontSize: "0.8rem" }}
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 8v4M12 16h.01" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {!searchedStudent && (
+          <div style={{ textAlign: "center", marginTop: "2rem" }}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowAllStudents(!showAllStudents)}
+            >
+              {showAllStudents ? "Ẩn danh sách" : "Xem tất cả sinh viên"}
+            </button>
           </div>
         )}
 
@@ -537,6 +728,49 @@ const Students: React.FC = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Status Change Modal */}
+        {statusChangeId !== null && (
+          <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: "400px" }}>
+              <div className="modal-header">
+                <h3 className="modal-title">Thay đổi trạng thái sinh viên</h3>
+                <button className="modal-close" onClick={closeStatusModal}>
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Trạng thái mới:</label>
+                  <select
+                    className="form-control"
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                  >
+                    <option value="ACTIVE">Đang học</option>
+                    <option value="SUSPENDED">Tạm ngừng</option>
+                    <option value="DROPPED_OUT">Thôi học</option>
+                    <option value="GRADUATED">Tốt nghiệp</option>
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer" style={{ gap: "10px" }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={closeStatusModal}
+                >
+                  Hủy
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={confirmStatusChange}
+                >
+                  Cập nhật
+                </button>
+              </div>
             </div>
           </div>
         )}

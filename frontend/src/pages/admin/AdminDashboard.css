@@ -71,6 +71,25 @@
   color: #616161;
 }
 
+.stat-change.negative {
+  background-color: #ffcdd2;
+  color: #c62828;
+}
+
+.alert {
+  padding: 12px 15px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+}
+
+.alert.alert-danger {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef5350;
+}
+
 .section {
   margin-bottom: 30px;
 }

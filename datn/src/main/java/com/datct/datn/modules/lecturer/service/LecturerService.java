@@ -1,5 +1,6 @@
 package com.datct.datn.modules.lecturer.service;
 
+import com.datct.datn.auth.CustomUserDetails;
 import com.datct.datn.modules.lecturer.DTO.CreateLecturerRequest;
 import com.datct.datn.modules.lecturer.DTO.LecturerResponse;
 import com.datct.datn.modules.lecturer.DTO.UpdateLecturerRequest;
@@ -11,7 +12,11 @@ import com.datct.datn.modules.user.entity.User;
 import com.datct.datn.modules.user.repository.DepartmentRepository;
 import com.datct.datn.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -24,18 +29,26 @@ public class LecturerService {
     private final UserRepository userRepository;
 
     private final DepartmentRepository departmentRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public LecturerResponse create(
+    @Transactional
+    public LecturerResponse createLecturer(
             CreateLecturerRequest request
     ) {
 
-        boolean exists =
-                lecturerRepository
-                        .existsByLecturerCode(
-                                request.getLecturerCode()
-                        );
+        if (userRepository.findByEmail(
+                request.getEmail()
+        ).isPresent()) {
 
-        if (exists) {
+            throw new RuntimeException(
+                    "Email already exists"
+            );
+        }
+
+        if (lecturerRepository.existsByLecturerCode(
+                request.getLecturerCode()
+        )) {
+
             throw new RuntimeException(
                     "Lecturer code already exists"
             );
@@ -44,45 +57,48 @@ public class LecturerService {
         Department department =
                 departmentRepository.findById(
                         request.getDepartmentId()
-                ).orElseThrow(
-                        () -> new RuntimeException(
+                ).orElseThrow(() ->
+                        new RuntimeException(
                                 "Department not found"
                         )
                 );
 
         User user = new User();
 
-        user.setFullName(
-                request.getFullName()
-        );
+        user.setFullName(request.getFullName());
 
-        user.setEmail(
-                request.getEmail()
-        );
+        user.setEmail(request.getEmail());
 
         user.setPassword(
-                request.getPassword()
+                passwordEncoder.encode(
+                        request.getPassword()
+                )
         );
 
-        user.setRole(Role.valueOf("TEACHER"));
+        user.setRole(Role.TEACHER);
 
-        User savedUser =
-                userRepository.save(user);
+        user = userRepository.save(user);
 
         Lecturer lecturer = new Lecturer();
+
+        lecturer.setUser(user);
 
         lecturer.setLecturerCode(
                 request.getLecturerCode()
         );
 
-        lecturer.setUser(savedUser);
-
         lecturer.setDepartment(department);
 
-        Lecturer savedLecturer =
-                lecturerRepository.save(lecturer);
+        lecturer = lecturerRepository.save(lecturer);
 
-        return mapToResponse(savedLecturer);
+        return new LecturerResponse(
+                lecturer.getId(),
+                user.getFullName(),
+                user.getEmail(),
+                lecturer.getLecturerCode(),
+                department.getName(),
+                lecturer.getStatus()
+        );
     }
 
     public List<LecturerResponse> getAll() {
@@ -106,6 +122,75 @@ public class LecturerService {
         return mapToResponse(lecturer);
     }
 
+    public long countLecturers() {
+        return lecturerRepository.count();
+    }
+
+    @Transactional(readOnly = true)
+    public LecturerResponse getMyProfile() {
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        CustomUserDetails userDetails =
+                (CustomUserDetails)
+                        authentication.getPrincipal();
+
+        Long userId =
+                userDetails.getUser().getId();
+
+        Lecturer lecturer =
+                lecturerRepository.findByUserId(userId)
+                        .orElseThrow(
+                                () -> new RuntimeException(
+                                        "Lecturer not found"
+                                )
+                        );
+
+        return mapToResponse(lecturer);
+    }
+
+    @Transactional
+    public LecturerResponse updateMyProfile(
+            UpdateLecturerRequest request
+    ) {
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        CustomUserDetails userDetails =
+                (CustomUserDetails)
+                        authentication.getPrincipal();
+
+        User currentUser =
+                userDetails.getUser();
+
+        Lecturer lecturer =
+                lecturerRepository
+                        .findByUserId(
+                                currentUser.getId()
+                        )
+                        .orElseThrow(
+                                () -> new RuntimeException(
+                                        "Lecturer not found"
+                                )
+                        );
+
+        currentUser.setFullName(
+                request.getFullName()
+        );
+
+
+        userRepository.save(currentUser);
+
+        return mapToResponse(lecturer);
+    }
+
+    @Transactional
     public LecturerResponse update(
             Long id,
             UpdateLecturerRequest request
@@ -128,12 +213,6 @@ public class LecturerService {
                         )
                 );
 
-        lecturer.setLecturerCode(
-                request.getLecturerCode()
-        );
-
-        lecturer.setDepartment(department);
-
         User user = lecturer.getUser();
 
         user.setFullName(
@@ -144,28 +223,25 @@ public class LecturerService {
                 request.getEmail()
         );
 
-        userRepository.save(user);
-
-        Lecturer updated =
-                lecturerRepository.save(lecturer);
-
-        return mapToResponse(updated);
-    }
-
-    public void delete(Long id) {
-
-        Lecturer lecturer =
-                lecturerRepository.findById(id)
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Lecturer not found"
-                                )
-                        );
-
-        userRepository.delete(
-                lecturer.getUser()
+        user.setEnabled(
+                request.getEnabled()
         );
+
+        lecturer.setLecturerCode(
+                request.getLecturerCode()
+        );
+
+        lecturer.setDepartment(
+                department
+        );
+
+        lecturer.setStatus(
+                request.getStatus()
+        );
+
+        return mapToResponse(lecturer);
     }
+
 
     private LecturerResponse mapToResponse(
             Lecturer lecturer
@@ -178,7 +254,8 @@ public class LecturerService {
                 lecturer.getUser().getEmail(),
                 lecturer.getDepartment() != null
                         ? lecturer.getDepartment().getName()
-                        : null
+                        : null,
+                lecturer.getStatus()
         );
     }
 }

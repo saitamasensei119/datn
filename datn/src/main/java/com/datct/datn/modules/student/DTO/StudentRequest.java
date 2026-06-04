@@ -1,5 +1,6 @@
 package com.datct.datn.modules.student.DTO;
 
+import com.datct.datn.modules.student.entity.StudentStatus;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,4 +17,6 @@ public class StudentRequest {
     private String studentCode;
 
     private Long departmentId;
+
+    private StudentStatus status;
 }

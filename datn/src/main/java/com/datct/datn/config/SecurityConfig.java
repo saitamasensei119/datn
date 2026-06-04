@@ -38,13 +38,13 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**")
                         .permitAll()
 
-                        .requestMatchers("/admin/**")
+                        .requestMatchers("/api/admin/**")
                         .hasRole("ADMIN")
 
-                        .requestMatchers("/teacher/**")
+                        .requestMatchers("/api/teacher/**")
                         .hasRole("TEACHER")
 
-                        .requestMatchers("/student/**")
+                        .requestMatchers("/api/student/**")
                         .hasRole("STUDENT")
 
                         .anyRequest()

@@ -1,5 +1,6 @@
 package com.datct.datn.modules.lecturer.DTO;
 
+import com.datct.datn.modules.lecturer.entity.LecturerStatus;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,4 +15,8 @@ public class UpdateLecturerRequest {
     private String lecturerCode;
 
     private Long departmentId;
+
+    private LecturerStatus status;
+
+    private Boolean enabled;
 }

@@ -39,4 +39,6 @@ public class Lecturer {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     private Department department;
+    @Enumerated(EnumType.STRING)
+    private LecturerStatus status = LecturerStatus.ACTIVE;
 }

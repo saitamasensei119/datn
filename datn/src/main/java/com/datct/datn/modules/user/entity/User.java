@@ -37,4 +37,5 @@ public class User {
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+    private Boolean enabled = true;
 }

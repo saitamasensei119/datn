@@ -7,6 +7,9 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL,
+
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -26,6 +29,12 @@ CREATE TABLE students (
     user_id BIGINT UNIQUE NOT NULL,
     student_code VARCHAR(50) UNIQUE NOT NULL,
     department_id BIGINT,
+
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    // ACTIVE,        đang học
+    // SUSPENDED,     tạm ngừng học
+    // DROPPED_OUT,   thôi học
+    // GRADUATED      đã tốt nghiệp
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_students_user
@@ -47,6 +56,12 @@ CREATE TABLE lecturers (
     lecturer_code VARCHAR(50) UNIQUE NOT NULL,
     department_id BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE'
+    //ACTIVE    : đang công tác
+    //ON_LEAVE  : nghỉ phép / tạm nghỉ
+    //RETIRED   : nghỉ hưu
+    //RESIGNED  : nghỉ việc
 
     CONSTRAINT fk_lecturers_user
         FOREIGN KEY (user_id)

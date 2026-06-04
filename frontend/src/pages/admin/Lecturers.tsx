@@ -14,6 +14,7 @@ interface Lecturer {
   email: string;
   departmentName: string;
   departmentId?: number;
+  status?: string;
 }
 
 const Lecturers: React.FC = () => {
@@ -34,6 +35,8 @@ const Lecturers: React.FC = () => {
   const [password, setPassword] = useState("");
   const [lecturerCode, setLecturerCode] = useState("");
   const [departmentId, setDepartmentId] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("ACTIVE");
+  const [statusChangeId, setStatusChangeId] = useState<number | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -50,6 +53,7 @@ const Lecturers: React.FC = () => {
         fullName: l.fullName || "",
         email: l.email || "",
         departmentName: l.departmentName || "Chưa có",
+        status: l.status || "ACTIVE",
         departmentId:
           deptRes.data.find((d: any) => d.name === l.departmentName)?.id ||
           undefined,
@@ -104,9 +108,34 @@ const Lecturers: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setError("");
+  const handleStatusChange = async (lectId: number, newStatus: string) => {
+    try {
+      await lecturerApi.changeStatus(lectId, newStatus);
+      setSuccess(`Cập nhật trạng thái giảng viên thành công!`);
+      fetchData();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setError(
+        err.response?.data?.message || "Có lỗi xảy ra khi cập nhật trạng thái.",
+      );
+    }
+  };
+
+  const openStatusModal = (lect: Lecturer) => {
+    setSelectedStatus(lect.status || "ACTIVE");
+    setStatusChangeId(lect.id);
+  };
+
+  const closeStatusModal = () => {
+    setStatusChangeId(null);
+  };
+
+  const confirmStatusChange = async () => {
+    if (statusChangeId !== null) {
+      await handleStatusChange(statusChangeId, selectedStatus);
+      closeStatusModal();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,31 +186,6 @@ const Lecturers: React.FC = () => {
       setError(
         err.response?.data?.message || "Có lỗi xảy ra khi lưu giảng viên.",
       );
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (
-      !window.confirm(
-        "Bạn có chắc chắn muốn xóa giảng viên này? Hệ thống cũng sẽ xóa tài khoản người dùng tương ứng.",
-      )
-    ) {
-      return;
-    }
-
-    setError("");
-    try {
-      await lecturerApi.delete(id);
-      setSuccess("Xóa giảng viên thành công!");
-      fetchData();
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      console.error(err);
-      setError(
-        err.response?.data?.message ||
-          "Không thể xóa giảng viên này. Giảng viên đang được phân công dạy ở các lớp học phần.",
-      );
-      setTimeout(() => setError(""), 5000);
     }
   };
 
@@ -251,6 +255,9 @@ const Lecturers: React.FC = () => {
                   <th>Họ tên giảng viên</th>
                   <th>Email tài khoản</th>
                   <th>Bộ môn / Khoa</th>
+                  <th style={{ width: "110px", textAlign: "center" }}>
+                    Trạng thái
+                  </th>
                   <th style={{ width: "120px", textAlign: "center" }}>
                     Thao tác
                   </th>
@@ -265,6 +272,27 @@ const Lecturers: React.FC = () => {
                     <td style={{ fontWeight: "500" }}>{lect.fullName}</td>
                     <td>{lect.email}</td>
                     <td>{lect.departmentName}</td>
+                    <td style={{ textAlign: "center", fontSize: "0.85rem" }}>
+                      <span
+                        style={{
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          backgroundColor:
+                            lect.status === "ACTIVE" ? "#c8e6c9" : "#ffcccc",
+                          color:
+                            lect.status === "ACTIVE" ? "#2e7d32" : "#c62828",
+                          fontWeight: "500",
+                        }}
+                      >
+                        {lect.status === "ACTIVE"
+                          ? "Hoạt động"
+                          : lect.status === "ON_LEAVE"
+                            ? "Tạm nghỉ"
+                            : lect.status === "RETIRED"
+                              ? "Về hưu"
+                              : "Từ chức"}
+                      </span>
+                    </td>
                     <td style={{ textAlign: "center" }}>
                       <div
                         className="table-actions"
@@ -279,10 +307,20 @@ const Lecturers: React.FC = () => {
                         </button>
                         <button
                           className="btn-icon-only delete"
-                          onClick={() => handleDelete(lect.id)}
-                          title="Xóa giảng viên"
+                          onClick={() => openStatusModal(lect)}
+                          title="Thay đổi trạng thái"
                         >
-                          <Trash2 size={16} />
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 8v4M12 16h.01" />
+                          </svg>
                         </button>
                       </div>
                     </td>
@@ -290,6 +328,49 @@ const Lecturers: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Status Change Modal */}
+        {statusChangeId !== null && (
+          <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: "400px" }}>
+              <div className="modal-header">
+                <h3 className="modal-title">Thay đổi trạng thái giảng viên</h3>
+                <button className="modal-close" onClick={closeStatusModal}>
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Trạng thái mới:</label>
+                  <select
+                    className="form-control"
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                  >
+                    <option value="ACTIVE">Hoạt động</option>
+                    <option value="ON_LEAVE">Tạm nghỉ</option>
+                    <option value="RETIRED">Về hưu</option>
+                    <option value="RESIGNED">Từ chức</option>
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer" style={{ gap: "10px" }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={closeStatusModal}
+                >
+                  Hủy
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={confirmStatusChange}
+                >
+                  Cập nhật
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -303,9 +384,9 @@ const Lecturers: React.FC = () => {
                     ? "Thêm giảng viên mới"
                     : "Cập nhật thông tin"}
                 </h3>
-                <button className="modal-close" onClick={handleCloseModal}>
+                {/* <button className="modal-close" onClick={handleCloseModal}>
                   <X size={18} />
-                </button>
+                </button> */}
               </div>
 
               <form onSubmit={handleSubmit}>
@@ -418,13 +499,13 @@ const Lecturers: React.FC = () => {
                 </div>
 
                 <div className="modal-footer">
-                  <button
+                  {/* <button
                     type="button"
                     className="btn btn-secondary"
                     onClick={handleCloseModal}
                   >
                     Hủy
-                  </button>
+                  </button> */}
                   <button
                     type="submit"
                     className="btn btn-primary"

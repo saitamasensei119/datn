@@ -1,5 +1,6 @@
 package com.datct.datn.modules.lecturer.DTO;
 
+import com.datct.datn.modules.lecturer.entity.LecturerStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,4 +19,5 @@ public class LecturerResponse {
     private String email;
 
     private String departmentName;
+    private LecturerStatus status;
 }

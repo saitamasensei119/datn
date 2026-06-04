@@ -7,10 +7,19 @@ import {
   GraduationCap,
   CalendarRange,
   TrendingUp,
+  AlertCircle,
 } from "lucide-react";
+import {
+  studentApi,
+  lecturerApi,
+  courseApi,
+  semesterApi,
+} from "../../services/api";
 import "./AdminDashboard.css";
+
 interface DashboardStats {
-  totalStudents: number;
+  activeStudents: number;
+  suspendedStudents: number;
   totalTeachers: number;
   totalCourses: number;
   totalSemesters: number;
@@ -19,26 +28,42 @@ interface DashboardStats {
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
-    totalStudents: 0,
+    activeStudents: 0,
+    suspendedStudents: 0,
     totalTeachers: 0,
     totalCourses: 0,
     totalSemesters: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    // Simulate loading dashboard stats
-    const timer = setTimeout(() => {
-      setStats({
-        totalStudents: 1250,
-        totalTeachers: 85,
-        totalCourses: 156,
-        totalSemesters: 4,
-      });
-      setLoading(false);
-    }, 500);
+    const fetchDashboardStats = async () => {
+      try {
+        const [studentStats, teachersRes, coursesRes, semestersRes] =
+          await Promise.all([
+            studentApi.getStats(),
+            lecturerApi.getAll(),
+            courseApi.getAll(),
+            semesterApi.getAll(),
+          ]);
 
-    return () => clearTimeout(timer);
+        setStats({
+          activeStudents: studentStats.data.activeCount || 0,
+          suspendedStudents: studentStats.data.suspendedCount || 0,
+          totalTeachers: teachersRes.data?.length || 0,
+          totalCourses: coursesRes.data?.length || 0,
+          totalSemesters: semestersRes.data?.length || 0,
+        });
+      } catch (err) {
+        console.error("Error fetching dashboard stats:", err);
+        setError("Không thể tải dữ liệu thống kê");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
   }, []);
 
   if (loading) {
@@ -55,16 +80,35 @@ const AdminDashboard: React.FC = () => {
   return (
     <AdminLayout>
       <div className="dashboard-container">
+        {error && (
+          <div className="alert alert-danger" style={{ marginBottom: "20px" }}>
+            <AlertCircle size={18} style={{ marginRight: "8px" }} />
+            {error}
+          </div>
+        )}
+
         <div className="stats-grid">
-          {/* Students Card */}
+          {/* Active Students Card */}
           <div className="stat-card">
-            <div className="stat-icon" style={{ backgroundColor: "#e3f2fd" }}>
-              <Users size={32} color="#1976d2" />
+            <div className="stat-icon" style={{ backgroundColor: "#e8f5e9" }}>
+              <Users size={32} color="#2e7d32" />
             </div>
             <div className="stat-content">
-              <p className="stat-label">Tổng Sinh Viên</p>
-              <p className="stat-value">{stats.totalStudents}</p>
-              <span className="stat-change positive">+5% từ tháng trước</span>
+              <p className="stat-label">Sinh Viên Đang Học</p>
+              <p className="stat-value">{stats.activeStudents}</p>
+              <span className="stat-change positive">Đang học</span>
+            </div>
+          </div>
+
+          {/* Suspended Students Card */}
+          <div className="stat-card">
+            <div className="stat-icon" style={{ backgroundColor: "#ffebee" }}>
+              <Users size={32} color="#c62828" />
+            </div>
+            <div className="stat-content">
+              <p className="stat-label">Sinh Viên Tạm Ngưng Học</p>
+              <p className="stat-value">{stats.suspendedStudents}</p>
+              <span className="stat-change negative">Tạm ngưng học</span>
             </div>
           </div>
 
@@ -76,19 +120,31 @@ const AdminDashboard: React.FC = () => {
             <div className="stat-content">
               <p className="stat-label">Tổng Giảng Viên</p>
               <p className="stat-value">{stats.totalTeachers}</p>
-              <span className="stat-change neutral">Không thay đổi</span>
+              <span className="stat-change neutral">Hoạt động</span>
             </div>
           </div>
 
           {/* Courses Card */}
           <div className="stat-card">
-            <div className="stat-icon" style={{ backgroundColor: "#e8f5e9" }}>
-              <BookOpen size={32} color="#388e3c" />
+            <div className="stat-icon" style={{ backgroundColor: "#e3f2fd" }}>
+              <BookOpen size={32} color="#1976d2" />
             </div>
             <div className="stat-content">
               <p className="stat-label">Tổng Lớp Học Phần</p>
               <p className="stat-value">{stats.totalCourses}</p>
-              <span className="stat-change positive">+8 lớp mới</span>
+              <span className="stat-change positive">Học kỳ này</span>
+            </div>
+          </div>
+
+          {/* Semesters Card */}
+          <div className="stat-card">
+            <div className="stat-icon" style={{ backgroundColor: "#fff3e0" }}>
+              <CalendarRange size={32} color="#f57c00" />
+            </div>
+            <div className="stat-content">
+              <p className="stat-label">Tổng Học Kỳ</p>
+              <p className="stat-value">{stats.totalSemesters}</p>
+              <span className="stat-change neutral">Năm học</span>
             </div>
           </div>
         </div>
@@ -152,8 +208,6 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       </div>
-
-      
     </AdminLayout>
   );
 };
