@@ -88,11 +88,12 @@ export const studentApi = {
 };
 
 export const courseApi = {
-  getAll: () => api.get("/api/courses"),
-  getById: (id: number) => api.get(`/api/courses/${id}`),
-  create: (data: any) => api.post("/api/courses", data),
-  update: (id: number, data: any) => api.put(`/api/courses/${id}`, data),
-  delete: (id: number) => api.delete(`/api/courses/${id}`),
+  getAll: () => api.get("/api/admin/courses"),
+  getById: (id: number) => api.get(`/api/admin/courses/${id}`),
+  create: (data: any) => api.post("/api/admin/courses", data),
+  update: (id: number, data: any) => api.put(`/api/admin/courses/${id}`, data),
+  delete: (id: number) => api.delete(`/api/admin/courses/${id}`),
+  getMyCourses: () => api.get("/api/teacher/courses/my-courses"),
 };
 
 export const enrollmentApi = {

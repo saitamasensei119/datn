@@ -1,5 +1,6 @@
 package com.datct.datn.modules.course.service;
 
+import com.datct.datn.auth.CustomUserDetails;
 import com.datct.datn.modules.course.DTO.CourseResponse;
 import com.datct.datn.modules.course.DTO.CreateCourseRequest;
 import com.datct.datn.modules.course.DTO.UpdateCourseRequest;
@@ -12,9 +13,13 @@ import com.datct.datn.modules.lecturer.repository.LecturerRepository;
 import com.datct.datn.modules.subject.entity.Subject;
 import com.datct.datn.modules.subject.repository.SubjectRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -186,6 +191,29 @@ public class CourseService {
     public void delete(Long id) {
 
         courseRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CourseResponse> getCoursesOfLecturer() {
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        CustomUserDetails userDetails =
+                (CustomUserDetails)
+                        authentication.getPrincipal();
+
+        Long userId =
+                userDetails.getUser().getId();
+        Lecturer lecturer = lecturerRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
+
+        return courseRepository
+                .findByLecturerId(lecturer.getId())
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     private CourseResponse mapToResponse(

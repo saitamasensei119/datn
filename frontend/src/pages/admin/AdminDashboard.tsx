@@ -5,16 +5,10 @@ import {
   Users,
   BookOpen,
   GraduationCap,
-  CalendarRange,
   TrendingUp,
   AlertCircle,
 } from "lucide-react";
-import {
-  studentApi,
-  lecturerApi,
-  courseApi,
-  semesterApi,
-} from "../../services/api";
+import { studentApi, lecturerApi, courseApi } from "../../services/api";
 import "./AdminDashboard.css";
 
 interface DashboardStats {
@@ -22,7 +16,6 @@ interface DashboardStats {
   suspendedStudents: number;
   totalTeachers: number;
   totalCourses: number;
-  totalSemesters: number;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -32,7 +25,6 @@ const AdminDashboard: React.FC = () => {
     suspendedStudents: 0,
     totalTeachers: 0,
     totalCourses: 0,
-    totalSemesters: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,20 +32,17 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
-        const [studentStats, teachersRes, coursesRes, semestersRes] =
-          await Promise.all([
-            studentApi.getStats(),
-            lecturerApi.getAll(),
-            courseApi.getAll(),
-            semesterApi.getAll(),
-          ]);
+        const [studentStats, teachersRes, coursesRes] = await Promise.all([
+          studentApi.getStats(),
+          lecturerApi.getAll(),
+          courseApi.getAll(),
+        ]);
 
         setStats({
           activeStudents: studentStats.data.activeCount || 0,
           suspendedStudents: studentStats.data.suspendedCount || 0,
           totalTeachers: teachersRes.data?.length || 0,
           totalCourses: coursesRes.data?.length || 0,
-          totalSemesters: semestersRes.data?.length || 0,
         });
       } catch (err) {
         console.error("Error fetching dashboard stats:", err);
@@ -135,24 +124,21 @@ const AdminDashboard: React.FC = () => {
               <span className="stat-change positive">Học kỳ này</span>
             </div>
           </div>
-
-          {/* Semesters Card */}
-          <div className="stat-card">
-            <div className="stat-icon" style={{ backgroundColor: "#fff3e0" }}>
-              <CalendarRange size={32} color="#f57c00" />
-            </div>
-            <div className="stat-content">
-              <p className="stat-label">Tổng Học Kỳ</p>
-              <p className="stat-value">{stats.totalSemesters}</p>
-              <span className="stat-change neutral">Năm học</span>
-            </div>
-          </div>
         </div>
 
         {/* Quick Actions */}
         <div className="section">
           <h2 className="section-title">Thao Tác Nhanh</h2>
           <div className="quick-actions">
+            <div className="action-card">
+              <div className="action-icon">🎓</div>
+              <h3>Quản Lý Lớp Học Phần</h3>
+              <p>Tạo và quản lý lớp học phần</p>
+              <a href="/admin/courses" className="action-link">
+                Đi tới →
+              </a>
+            </div>
+
             <div className="action-card">
               <div className="action-icon">👥</div>
               <h3>Quản Lý Sinh Viên</h3>

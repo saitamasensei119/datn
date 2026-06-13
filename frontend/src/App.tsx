@@ -9,6 +9,7 @@ import Departments from "./pages/admin/Departments";
 import Lecturers from "./pages/admin/Lecturers";
 import Semesters from "./pages/admin/Semesters";
 import Students from "./pages/admin/Students";
+import Courses from "./pages/admin/Courses";
 
 // Teacher Components
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
@@ -78,6 +79,14 @@ function App() {
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <Students />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/courses"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <Courses />
           </ProtectedRoute>
         }
       />

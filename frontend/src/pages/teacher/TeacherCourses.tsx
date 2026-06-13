@@ -19,8 +19,15 @@ const TeacherCourses: React.FC = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const response = await courseApi.getAll();
-        setCourses(response.data || []);
+        const response = await courseApi.getMyCourses();
+        const mapped = response.data.map((c: any) => ({
+          id: c.id,
+          name: c.subjectName,
+          code: c.courseCode,
+          studentCount: c.maxStudents,
+        }));
+
+        setCourses(mapped);
       } catch (err) {
         console.error(err);
         setError("Không thể tải dữ liệu lớp học phần");
@@ -90,8 +97,6 @@ const TeacherCourses: React.FC = () => {
           </div>
         )}
       </div>
-
-      
     </TeacherLayout>
   );
 };

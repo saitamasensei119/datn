@@ -101,6 +101,11 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               label="Môn Học"
             />
             <SidebarLink
+              to="/admin/courses"
+              icon={<BookMarked size={20} />}
+              label="Khóa Học"
+            />
+            <SidebarLink
               to="/admin/semesters"
               icon={<CalendarRange size={20} />}
               label="Học Kỳ"

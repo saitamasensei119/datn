@@ -108,6 +108,12 @@ CREATE TABLE courses (
     semester_id BIGINT NOT NULL,
     course_code VARCHAR(50) UNIQUE NOT NULL,
     max_students INT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PLANNED',
+    PLANNED,      // chuẩn bị mở
+    OPEN,         // đang cho đăng ký
+    IN_PROGRESS,  // đang học
+    COMPLETED,    // kết thúc
+    CANCELLED     // hủy
 
     CONSTRAINT fk_courses_subject
         FOREIGN KEY (subject_id)

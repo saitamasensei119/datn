@@ -82,8 +82,8 @@ const TeacherGrades: React.FC = () => {
                 <tr>
                   <th>Mã SV</th>
                   <th>Tên Sinh Viên</th>
-                  <th>Điểm Giữa Kỳ (40%)</th>
-                  <th>Điểm Cuối Kỳ (60%)</th>
+                  <th>Điểm Giữa Kỳ </th>
+                  <th>Điểm Cuối Kỳ </th>
                   <th>Điểm Tổng</th>
                 </tr>
               </thead>

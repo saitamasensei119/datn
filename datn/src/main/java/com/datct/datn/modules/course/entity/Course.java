@@ -42,4 +42,7 @@ public class Course {
     @JoinColumn(name = "semester_id",
             nullable = false)
     private Semester semester;
+
+    @Enumerated(EnumType.STRING)
+    private CourseStatus status = CourseStatus.PLANNED;
 }

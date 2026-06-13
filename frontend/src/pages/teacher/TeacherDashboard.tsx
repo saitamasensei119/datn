@@ -18,7 +18,7 @@ const TeacherDashboard: React.FC = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const response = await courseApi.getAll();
+        const response = await courseApi.getMyCourses();
         setCourses(response.data || []);
       } catch (err) {
         console.error(err);

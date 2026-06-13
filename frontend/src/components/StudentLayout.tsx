@@ -82,7 +82,7 @@ const StudentLayout: React.FC<{ children: React.ReactNode }> = ({
         </div>
 
         <nav className="sidebar-nav">
-          <ul>
+          <ul className="sidebar-menu">
             <SidebarLink
               to="/student/dashboard"
               icon={<LayoutDashboard size={20} />}
@@ -129,12 +129,12 @@ const StudentLayout: React.FC<{ children: React.ReactNode }> = ({
         {/* Header */}
         <header className="app-header">
           <div className="header-left">
-            <button
+            {/* <button
               className="toggle-sidebar-btn"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               ☰
-            </button>
+            </button> */}
             <h1 className="page-title">{getHeaderTitle()}</h1>
           </div>
           <div className="header-right">
