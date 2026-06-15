@@ -6,7 +6,6 @@ import {
   Search,
   X,
   AlertTriangle,
-  User,
   GraduationCap,
   CheckCircle,
 } from "lucide-react";
@@ -29,7 +28,7 @@ interface StudentProfile {
 
 const Students: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [searchId, setSearchId] = useState("");
+  const [searchCode, setSearchCode] = useState("");
   const [searchedStudent, setSearchedStudent] = useState<StudentProfile | null>(
     null,
   );
@@ -85,14 +84,14 @@ const Students: React.FC = () => {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchId.trim()) return;
+    if (!searchCode.trim()) return;
 
     setSearchLoading(true);
     setSearchError("");
     setSearchedStudent(null);
 
     try {
-      const response = await studentApi.getById(Number(searchId));
+      const response = await studentApi.getByStudentCode(searchCode);
       const s = response.data;
 
       // Map response fields
@@ -110,7 +109,7 @@ const Students: React.FC = () => {
       });
     } catch (err: any) {
       console.error(err);
-      setSearchError("Không tìm thấy sinh viên có ID này hoặc có lỗi xảy ra.");
+      setSearchError("Không tìm thấy sinh viên có Mã này hoặc có lỗi xảy ra.");
     } finally {
       setSearchLoading(false);
     }
@@ -215,7 +214,7 @@ const Students: React.FC = () => {
           `Thêm sinh viên thành công! Sinh viên được tạo có ID: ${response.data.id}`,
         );
         // Automatically search for the newly created student to display them
-        setSearchId(response.data.id.toString());
+        setSearchCode(response.data.studentCode);
         setSearchedStudent({
           id: response.data.id,
           studentCode: response.data.studentCode,
@@ -273,7 +272,7 @@ const Students: React.FC = () => {
                 marginTop: "0.25rem",
               }}
             >
-              Thêm mới sinh viên và tìm kiếm hồ sơ học tập cá nhân bằng ID
+              Thêm mới sinh viên và tìm kiếm hồ sơ học tập cá nhân bằng Mã SV
             </p>
           </div>
           <button
@@ -319,7 +318,7 @@ const Students: React.FC = () => {
               }}
             >
               <Search size={18} style={{ color: "var(--primary)" }} />
-              <span>Tra cứu Sinh viên bằng ID</span>
+              <span>Tra cứu Sinh viên bằng Mã SV</span>
             </h3>
             <form
               onSubmit={handleSearch}
@@ -327,11 +326,11 @@ const Students: React.FC = () => {
               style={{ maxWidth: "none" }}
             >
               <input
-                type="number"
-                placeholder="Nhập ID sinh viên cần tìm... (ví dụ: 1)"
+                type="text"
+                placeholder="Nhập mã sinh viên cần tìm... (ví dụ: SV001)"
                 className="form-control"
-                value={searchId}
-                onChange={(e) => setSearchId(e.target.value)}
+                value={searchCode}
+                onChange={(e) => setSearchCode(e.target.value)}
                 required
               />
               <button

@@ -82,6 +82,19 @@ public class StudentService {
         return mapToResponse(student);
     }
 
+    public StudentResponse getByStudentCode(String studentCode ) {
+
+        Student student =
+                studentRepository.findByStudentCode(studentCode)
+                        .orElseThrow(
+                                () -> new RuntimeException(
+                                        "Student not found"
+                                )
+                        );
+
+        return mapToResponse(student);
+    }
+
     @Transactional
     public StudentResponse update(
             Long id,
@@ -136,12 +149,13 @@ public class StudentService {
 
         return new StudentResponse(
                 student.getId(),
-                student.getStudentCode(),
                 student.getUser().getFullName(),
                 student.getUser().getEmail(),
+                student.getStudentCode(),
                 student.getDepartment() != null
                         ? student.getDepartment().getId()
                         : null,
+                student.getDepartment() != null ? student.getDepartment().getName() : null,
                 student.getStatus()
         );
     }
@@ -173,6 +187,7 @@ public class StudentService {
                         student.getUser().getEmail(),
                         student.getStudentCode(),
                         student.getDepartment() != null ? student.getDepartment().getId() : null,
+                        student.getDepartment() != null ? student.getDepartment().getName() : null,
                         student.getStatus()
                 ))
                 .toList();

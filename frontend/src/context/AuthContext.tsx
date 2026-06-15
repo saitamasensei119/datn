@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export interface UserSession {
+  id: number;
   email: string;
   role: 'ADMIN' | 'TEACHER' | 'STUDENT';
 }
@@ -46,6 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (decoded && decoded.exp * 1000 > Date.now()) {
         setToken(storedToken);
         setUser({
+          id: decoded.userId,
           email: decoded.sub,
           role: decoded.role.replace('ROLE_', '') as any, // backend role may have ROLE_ prefix or not
         });
@@ -62,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (decoded) {
       setToken(newToken);
       setUser({
+        id: decoded.userId,
         email: decoded.sub,
         role: decoded.role.replace('ROLE_', '') as any,
       });

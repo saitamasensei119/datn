@@ -56,10 +56,8 @@ const Subjects: React.FC = () => {
         subjectCode: subj.subjectCode,
         name: subj.name,
         credits: subj.credits,
-        departmentName: subj.department
-          ? subj.department.name
-          : "Chưa phân khoa",
-        departmentId: subj.department ? subj.department.id : undefined,
+        departmentName: subj.departmentName || "Chưa phân khoa",
+        departmentId: subj.departmentId,
       }));
 
       setSubjects(mappedSubjects);

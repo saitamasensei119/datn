@@ -1,19 +1,18 @@
 package com.datct.datn.modules.enrollment.controller;
 
-import com.datct.datn.modules.course.DTO.SemesterResponse;
-import com.datct.datn.modules.course.DTO.StudentCourseResponse;
 import com.datct.datn.modules.enrollment.DTO.EnrollmentRequest;
 import com.datct.datn.modules.enrollment.service.EnrollmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/enrollments")
+@RequestMapping("/api/admin/enrollments")
 @RequiredArgsConstructor
-public class EnrollmentController {
+public class AdminEnrollmentController {
 
     private final EnrollmentService enrollmentService;
 
@@ -22,15 +21,10 @@ public class EnrollmentController {
             @RequestBody EnrollmentRequest request
     ) {
 
-        enrollmentService.studentEnroll(request);
+        enrollmentService.enroll(request);
 
         return ResponseEntity.ok(
                 "Enroll success"
         );
-    }
-    @GetMapping
-    public List<StudentCourseResponse> getStudentEnroll() {
-
-        return enrollmentService.getStudentEnroll();
     }
 }

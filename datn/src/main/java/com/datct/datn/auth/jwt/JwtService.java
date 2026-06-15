@@ -23,6 +23,7 @@ public class JwtService {
 
         return Jwts.builder()
                 .setSubject(user.getEmail())
+                .claim("userId",user.getId())
                 .claim("role", user.getRole().name())
                 .setIssuedAt(new Date())
                 .setExpiration(
@@ -44,6 +45,17 @@ public class JwtService {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+    public Long extractUserId(String token) {
+
+        return Jwts.parserBuilder()
+                .setSigningKey(
+                        Keys.hmacShaKeyFor(secretKey.getBytes())
+                )
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("userId", Long.class);
     }
     public boolean isTokenValid(
             String token,

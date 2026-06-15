@@ -80,6 +80,7 @@ export const lecturerApi = {
 export const studentApi = {
   getStats: () => api.get("/api/admin/students/statistics"),
   getById: (id: number) => api.get(`/api/admin/students/${id}`),
+  getByStudentCode: (studentCode: string) => api.get(`/api/admin/students/code/${studentCode}`),
   create: (data: any) => api.post("/api/admin/students", data),
   update: (id: number, data: any) => api.put(`/api/admin/students/${id}`, data),
   getAll: () => api.get("/api/admin/students"),
@@ -94,11 +95,31 @@ export const courseApi = {
   update: (id: number, data: any) => api.put(`/api/admin/courses/${id}`, data),
   delete: (id: number) => api.delete(`/api/admin/courses/${id}`),
   getMyCourses: () => api.get("/api/teacher/courses/my-courses"),
+  getOpenCourses: (page: number = 0, size: number = 10) =>
+    api.get("/api/student/courses", { params: { page, size } }),
+  searchOpenCourses: (
+    page: number = 0,
+    size: number = 10,
+    courseCode?: string,
+    subjectCode?: string,
+    subjectName?: string,
+  ) =>
+    api.get("/api/student/courses/search", {
+      params: { page, size, courseCode, subjectCode, subjectName },
+    }),
+  getStudentsByCourseAdmin: (courseId: number) =>
+    api.get(`/api/admin/courses/${courseId}/students`),
+  getStudentsByCourseTeacher: (courseId: number) =>
+    api.get(`/api/teacher/courses/${courseId}/students`),
 };
 
 export const enrollmentApi = {
+  getMyEnrollments: () => api.get("/api/enrollments"),
   enroll: (data: { studentId: number; courseId: number }) =>
     api.post("/api/enrollments", data),
+  enrollMultiple: (
+    enrollments: Array<{ studentId: number; courseId: number }>,
+  ) => Promise.all(enrollments.map((e) => api.post("/api/enrollments", e))),
 };
 
 export default api;

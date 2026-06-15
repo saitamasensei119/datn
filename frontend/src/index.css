@@ -410,18 +410,18 @@ body {
 }
 
 .btn-primary {
-  background-color: var(--primary);
-  color: white;
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
 }
 .btn-primary:hover {
-  background-color: var(--primary-hover);
+  background-color: var(--primary-hover) !important;
   box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
 }
 
 .btn-secondary {
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
-  border-color: var(--card-border);
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--text-muted) !important;
 }
 .btn-secondary:hover {
   background-color: var(--text-muted);
@@ -584,6 +584,7 @@ select.form-control {
 }
 
 .modal-content {
+  margin-top: 100px;
   background-color: var(--bg-secondary);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);

@@ -3,16 +3,23 @@ package com.datct.datn.modules.course.service;
 import com.datct.datn.auth.CustomUserDetails;
 import com.datct.datn.modules.course.DTO.CourseResponse;
 import com.datct.datn.modules.course.DTO.CreateCourseRequest;
+import com.datct.datn.modules.course.DTO.StudentCourseResponse;
 import com.datct.datn.modules.course.DTO.UpdateCourseRequest;
 import com.datct.datn.modules.course.entity.Course;
+import com.datct.datn.modules.course.entity.CourseStatus;
 import com.datct.datn.modules.course.entity.Semester;
 import com.datct.datn.modules.course.repository.CourseRepository;
 import com.datct.datn.modules.course.repository.SemesterRepository;
+import com.datct.datn.modules.enrollment.repository.EnrollmentRepository;
 import com.datct.datn.modules.lecturer.entity.Lecturer;
 import com.datct.datn.modules.lecturer.repository.LecturerRepository;
+import com.datct.datn.modules.student.DTO.StudentResponse;
+import com.datct.datn.modules.student.entity.Student;
 import com.datct.datn.modules.subject.entity.Subject;
 import com.datct.datn.modules.subject.repository.SubjectRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -32,6 +39,7 @@ public class CourseService {
     private final LecturerRepository lecturerRepository;
 
     private final SemesterRepository semesterRepository;
+    private final EnrollmentRepository enrollmentRepository;
 
     public CourseResponse create(
             CreateCourseRequest request
@@ -181,6 +189,9 @@ public class CourseService {
         course.setSemester(semester);
 
         course.setLecturer(lecturer);
+        course.setStatus(
+                request.getStatus()
+        );
 
         Course updated =
                 courseRepository.save(course);
@@ -216,6 +227,84 @@ public class CourseService {
                 .toList();
     }
 
+    public Page<CourseResponse> getOpenCourses(
+            Pageable pageable
+    ) {
+
+        return courseRepository
+                .findByStatus(
+                        CourseStatus.OPEN,
+                        pageable
+                )
+                .map(this::mapToResponse);
+    }
+
+    public Page<CourseResponse> searchOpenCoursesByCourseCode(
+            String courseCode,
+            Pageable pageable
+    ) {
+        return courseRepository
+                .findByStatusAndCourseCodeContainingIgnoreCase(
+                        CourseStatus.OPEN,
+                        courseCode,
+                        pageable
+                )
+                .map(this::mapToResponse);
+    }
+
+    public Page<CourseResponse> searchOpenCoursesBySubjectCode(
+            String subjectCode,
+            Pageable pageable
+    ) {
+        return courseRepository
+                .findByStatusAndSubject_SubjectCodeContainingIgnoreCase(
+                        CourseStatus.OPEN,
+                        subjectCode,
+                        pageable
+                )
+                .map(this::mapToResponse);
+    }
+
+    public Page<CourseResponse> searchOpenCoursesBySubjectName(
+            String name,
+            Pageable pageable
+    ) {
+        return courseRepository
+                .findByStatusAndSubject_NameContainingIgnoreCase(
+                        CourseStatus.OPEN,
+                        name,
+                        pageable
+                )
+                .map(this::mapToResponse);
+    }
+
+    public List<StudentResponse> getStudentsByCourseId(
+            Long courseId
+    ) {
+
+        List<Student> students =
+                enrollmentRepository
+                        .findStudentsByCourseId(courseId);
+
+        return students.stream()
+                .map(student ->
+                        new StudentResponse(
+                                student.getId(),
+                                student.getUser().getFullName(),
+                                student.getUser().getEmail(),
+                                student.getStudentCode(),
+                                student.getDepartment() != null
+                                        ? student.getDepartment().getId()
+                                        : null,
+                                student.getDepartment() != null ? student.getDepartment().getName() : null,
+                                student.getStatus()
+                        )
+                )
+                .toList();
+    }
+
+
+
     private CourseResponse mapToResponse(
             Course course
     ) {
@@ -230,7 +319,8 @@ public class CourseService {
                         .getUser()
                         .getFullName()
                         : null,
-                course.getSemester().getName()
+                course.getSemester().getName(),
+                course.getStatus()
         );
     }
 }

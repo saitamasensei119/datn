@@ -35,6 +35,14 @@ public class AdminStudentController {
         return studentService.getById(id);
     }
 
+    @GetMapping("/code/{studentCode}")
+    public StudentResponse getByStudentCode(
+            @PathVariable String studentCode
+    ) {
+
+        return studentService.getByStudentCode(studentCode);
+    }
+
     @PutMapping("/{id}")
     public StudentResponse update(
             @PathVariable Long id,

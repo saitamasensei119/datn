@@ -145,6 +145,9 @@ public class SubjectService {
                 subject.getName(),
                 subject.getCredits(),
                 subject.getDepartment() != null
+                        ? subject.getDepartment().getId()
+                        : null,
+                subject.getDepartment() != null
                         ? subject.getDepartment().getName()
                         : null
         );

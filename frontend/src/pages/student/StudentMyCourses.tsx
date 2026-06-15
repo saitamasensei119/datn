@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import StudentLayout from "../../components/StudentLayout";
-import { courseApi } from "../../services/api";
+import { enrollmentApi } from "../../services/api";
 import { BookOpen } from "lucide-react";
 import "./StudentMyCourses.css";
 
@@ -23,8 +23,19 @@ const StudentMyCourses: React.FC = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const response = await courseApi.getAll();
-        setCourses(response.data || []);
+        const response = await enrollmentApi.getMyEnrollments();
+        const data = response.data || [];
+        const mappedCourses = data.map((item: any) => ({
+          id: item.course?.id || item.id,
+          name: item.course?.subjectName || item.subjectName || item.name || "Chưa có tên",
+          code: item.course?.courseCode || item.courseCode || item.code || "N/A",
+          lecturer: item.course?.lecturerName || item.lecturerName || item.lecturer,
+          credits: item.course?.credits || item.credits,
+          status: item.course?.status || item.status,
+          startDate: item.course?.startDate || item.startDate,
+          endDate: item.course?.endDate || item.endDate
+        }));
+        setCourses(mappedCourses);
       } catch (err) {
         console.error(err);
         setError("Không thể tải dữ liệu lớp học phần");
@@ -38,12 +49,16 @@ const StudentMyCourses: React.FC = () => {
 
   const getStatusColor = (status?: string) => {
     switch (status) {
-      case "ongoing":
-        return "#4caf50";
-      case "completed":
-        return "#2196f3";
-      case "upcoming":
-        return "#ff9800";
+      case "OPEN":
+        return "#42a5f5";
+      case "IN_PROGRESS":
+        return "#03a9f4";
+      case "COMPLETED":
+        return "#1a237e";
+      case "CANCELLED":
+        return "#e57373";
+      case "PLANNED":
+        return "#64b5f6";
       default:
         return "#666";
     }
@@ -51,12 +66,16 @@ const StudentMyCourses: React.FC = () => {
 
   const getStatusLabel = (status?: string) => {
     switch (status) {
-      case "ongoing":
+      case "OPEN":
+        return "Đang Mở Đăng Kí";
+      case "IN_PROGRESS":
         return "Đang Học";
-      case "completed":
-        return "Đã Hoàn Thành";
-      case "upcoming":
-        return "Sắp Tới";
+      case "COMPLETED":
+        return "Kết Thúc";
+      case "CANCELLED":
+        return "Hủy";
+      case "PLANNED":
+        return "Chuẩn Bị Mở";
       default:
         return "Không Xác Định";
     }

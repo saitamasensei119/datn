@@ -1,5 +1,6 @@
 package com.datct.datn.modules.course.DTO;
 
+import com.datct.datn.modules.course.entity.CourseStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,4 +21,6 @@ public class CourseResponse {
     private String lecturerName;
 
     private String semesterName;
+
+    private CourseStatus status;
 }

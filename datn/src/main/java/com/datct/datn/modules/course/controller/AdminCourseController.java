@@ -4,6 +4,7 @@ import com.datct.datn.modules.course.DTO.CourseResponse;
 import com.datct.datn.modules.course.DTO.CreateCourseRequest;
 import com.datct.datn.modules.course.DTO.UpdateCourseRequest;
 import com.datct.datn.modules.course.service.CourseService;
+import com.datct.datn.modules.student.DTO.StudentResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -27,6 +28,13 @@ public class AdminCourseController {
     public List<CourseResponse> getAll() {
 
         return courseService.getAll();
+    }
+
+    @GetMapping("/{courseId}/students")
+    public List<StudentResponse> getStudentsByCourseId(
+            @PathVariable Long courseId
+    ) {
+        return courseService.getStudentsByCourseId(courseId);
     }
 
     @GetMapping("/{id}")

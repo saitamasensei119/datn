@@ -377,7 +377,7 @@ const Lecturers: React.FC = () => {
         {/* Create / Edit Modal */}
         {isModalOpen && (
           <div className="modal-overlay">
-            <div className="modal-content">
+            <div className="modal-content" style={{ marginTop: "200px" }}>
               <div className="modal-header">
                 <h3 className="modal-title">
                   {modalType === "create"

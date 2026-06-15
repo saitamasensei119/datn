@@ -17,5 +17,7 @@ public class SubjectResponse {
 
     private Integer credits;
 
+    private Long departmentId;
+
     private String departmentName;
 }

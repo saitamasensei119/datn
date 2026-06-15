@@ -41,7 +41,24 @@ interface Course {
   subjectId?: number;
   lecturerId?: number;
   semesterId?: number;
+  status?: string;
 }
+
+const getStatusBadge = (status: string | undefined) => {
+  switch (status) {
+    case "OPEN":
+      return { bg: "#c8e6c9", color: "#2e7d32", text: "Đang Mở Đăng Kí" };
+    case "IN_PROGRESS":
+      return { bg: "#fff3e0", color: "#ef6c00", text: "Đang Học" };
+    case "COMPLETED":
+      return { bg: "#e8eaf6", color: "#283593", text: "Kết Thúc" };
+    case "CANCELLED":
+      return { bg: "#ffcccc", color: "#c62828", text: "Hủy" };
+    case "PLANNED":
+    default:
+      return { bg: "#e3f2fd", color: "#1565c0", text: "Chuẩn Bị Mở" };
+  }
+};
 
 const Courses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -63,6 +80,29 @@ const Courses: React.FC = () => {
   const [subjectId, setSubjectId] = useState<string>("");
   const [lecturerId, setLecturerId] = useState<string>("");
   const [semesterId, setSemesterId] = useState<string>("");
+  const [status, setStatus] = useState<string>("PLANNED");
+
+  // Student Modal State
+  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
+  const [courseStudents, setCourseStudents] = useState<any[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [selectedCourseName, setSelectedCourseName] = useState("");
+
+  const openStudentModal = async (course: Course) => {
+    setSelectedCourseName(course.courseCode + " - " + course.subjectName);
+    setIsStudentModalOpen(true);
+    setStudentsLoading(true);
+    setCourseStudents([]);
+    try {
+      const response = await courseApi.getStudentsByCourseAdmin(course.id);
+      setCourseStudents(response.data);
+    } catch (err) {
+      console.error(err);
+      alert("Không thể tải danh sách sinh viên.");
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -82,6 +122,7 @@ const Courses: React.FC = () => {
         subjectName: course.subjectName || "Chưa có",
         lecturerName: course.lecturerName || "Chưa có",
         semesterName: course.semesterName || "Chưa có",
+        status: course.status || "PLANNED",
       }));
 
       setCourses(mappedCourses);
@@ -125,6 +166,7 @@ const Courses: React.FC = () => {
     setSubjectId(subjects[0]?.id.toString() || "");
     setLecturerId(lecturers[0]?.id.toString() || "");
     setSemesterId(semesters[0]?.id.toString() || "");
+    setStatus("PLANNED");
     setSelectedId(null);
     setIsModalOpen(true);
     setError("");
@@ -137,6 +179,7 @@ const Courses: React.FC = () => {
     setSubjectId(course.subjectId?.toString() || "");
     setLecturerId(course.lecturerId?.toString() || "");
     setSemesterId(course.semesterId?.toString() || "");
+    setStatus(course.status || "PLANNED");
     setSelectedId(course.id);
     setIsModalOpen(true);
     setError("");
@@ -170,6 +213,7 @@ const Courses: React.FC = () => {
       lecturerId: Number(lecturerId),
       semesterId: Number(semesterId),
       maxStudents: Number(maxStudents),
+      status,
     };
 
     try {
@@ -294,6 +338,9 @@ const Courses: React.FC = () => {
                   <th>Giảng Viên</th>
                   <th>Học Kỳ</th>
                   <th style={{ width: "80px", textAlign: "center" }}>Sĩ Số</th>
+                  <th style={{ width: "100px", textAlign: "center" }}>
+                    Trạng Thái
+                  </th>
                   <th style={{ width: "150px", textAlign: "center" }}>
                     Thao Tác
                   </th>
@@ -311,7 +358,33 @@ const Courses: React.FC = () => {
                     <td style={{ textAlign: "center" }}>
                       {course.maxStudents}
                     </td>
+                    <td style={{ textAlign: "center", fontSize: "0.9rem" }}>
+                      {(() => {
+                        const badge = getStatusBadge(course.status);
+                        return (
+                          <span
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              backgroundColor: badge.bg,
+                              color: badge.color,
+                              fontWeight: "500",
+                            }}
+                          >
+                            {badge.text}
+                          </span>
+                        );
+                      })()}
+                    </td>
                     <td style={{ textAlign: "center" }}>
+                      <button
+                        className="btn-icon-only"
+                        onClick={() => openStudentModal(course)}
+                        title="Danh sách sinh viên"
+                        style={{ marginRight: "4px" }}
+                      >
+                        <BookOpen size={16} />
+                      </button>
                       <button
                         className="btn-icon-only"
                         onClick={() => openEditModal(course)}
@@ -337,7 +410,7 @@ const Courses: React.FC = () => {
         {/* Create / Edit Modal */}
         {isModalOpen && (
           <div className="modal-overlay">
-            <div className="modal-content">
+            <div className="modal-content" style={{ marginTop: "200px" }}>
               <div className="modal-header">
                 <h3 className="modal-title">
                   {modalType === "create"
@@ -357,92 +430,122 @@ const Courses: React.FC = () => {
               )}
 
               <form onSubmit={handleSubmit} className="modal-form">
-                <div className="form-group">
-                  <label className="form-label">
-                    Mã Lớp Học Phần{" "}
-                    <span style={{ color: "var(--danger)" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={courseCode}
-                    onChange={(e) => setCourseCode(e.target.value)}
-                    placeholder="Ví dụ: KTPM01"
-                    required
-                  />
-                </div>
+                <div className="modal-body">
+                  {error && (
+                    <div
+                      className="alert alert-danger"
+                      style={{ marginBottom: "1rem" }}
+                    >
+                      <span>{error}</span>
+                    </div>
+                  )}
+                  <div className="form-group">
+                    <label className="form-label">
+                      Mã Lớp Học Phần{" "}
+                      <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={courseCode}
+                      onChange={(e) => setCourseCode(e.target.value)}
+                      placeholder="Ví dụ: KTPM01"
+                      required
+                    />
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label">
-                    Môn Học <span style={{ color: "var(--danger)" }}>*</span>
-                  </label>
-                  <select
-                    className="form-control"
-                    value={subjectId}
-                    onChange={(e) => setSubjectId(e.target.value)}
-                    required
-                  >
-                    <option value="">-- Chọn môn học --</option>
-                    {subjects.map((subject) => (
-                      <option key={subject.id} value={subject.id}>
-                        {subject.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div className="form-group">
+                    <label className="form-label">
+                      Môn Học <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <select
+                      className="form-control"
+                      value={subjectId}
+                      onChange={(e) => setSubjectId(e.target.value)}
+                      required
+                    >
+                      <option value="">-- Chọn môn học --</option>
+                      {subjects.map((subject) => (
+                        <option key={subject.id} value={subject.id}>
+                          {subject.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label">
-                    Giảng Viên <span style={{ color: "var(--danger)" }}>*</span>
-                  </label>
-                  <select
-                    className="form-control"
-                    value={lecturerId}
-                    onChange={(e) => setLecturerId(e.target.value)}
-                    required
-                  >
-                    <option value="">-- Chọn giảng viên --</option>
-                    {lecturers.map((lecturer) => (
-                      <option key={lecturer.id} value={lecturer.id}>
-                        {lecturer.fullName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div className="form-group">
+                    <label className="form-label">
+                      Giảng Viên{" "}
+                      <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <select
+                      className="form-control"
+                      value={lecturerId}
+                      onChange={(e) => setLecturerId(e.target.value)}
+                      required
+                    >
+                      <option value="">-- Chọn giảng viên --</option>
+                      {lecturers.map((lecturer) => (
+                        <option key={lecturer.id} value={lecturer.id}>
+                          {lecturer.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label">
-                    Học Kỳ <span style={{ color: "var(--danger)" }}>*</span>
-                  </label>
-                  <select
-                    className="form-control"
-                    value={semesterId}
-                    onChange={(e) => setSemesterId(e.target.value)}
-                    required
-                  >
-                    <option value="">-- Chọn học kỳ --</option>
-                    {semesters.map((semester) => (
-                      <option key={semester.id} value={semester.id}>
-                        {semester.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div className="form-group">
+                    <label className="form-label">
+                      Học Kỳ <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <select
+                      className="form-control"
+                      value={semesterId}
+                      onChange={(e) => setSemesterId(e.target.value)}
+                      required
+                    >
+                      <option value="">-- Chọn học kỳ --</option>
+                      {semesters.map((semester) => (
+                        <option key={semester.id} value={semester.id}>
+                          {semester.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label">
-                    Sĩ Số Tối Đa{" "}
-                    <span style={{ color: "var(--danger)" }}>*</span>
-                  </label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={maxStudents}
-                    onChange={(e) => setMaxStudents(Number(e.target.value))}
-                    min="1"
-                    max="999"
-                    required
-                  />
+                  <div className="form-group">
+                    <label className="form-label">
+                      Sĩ Số Tối Đa{" "}
+                      <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={maxStudents}
+                      onChange={(e) => setMaxStudents(Number(e.target.value))}
+                      min="1"
+                      max="999"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Trạng Thái{" "}
+                      <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <select
+                      className="form-control"
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                      required
+                    >
+                      <option value="PLANNED">Chuẩn Bị Mở</option>
+                      <option value="OPEN">Đang Mở Đăng Kí</option>
+                      <option value="IN_PROGRESS">Đang Học</option>
+                      <option value="COMPLETED">Kết Thúc</option>
+                      <option value="CANCELLED">Hủy</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="modal-footer">
@@ -458,6 +561,88 @@ const Courses: React.FC = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* View Students Modal */}
+        {isStudentModalOpen && (
+          <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: "600px" }}>
+              <div className="modal-header">
+                <h3 className="modal-title">Sinh viên trong lớp: {selectedCourseName}</h3>
+                <button className="modal-close" onClick={() => setIsStudentModalOpen(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="modal-body" style={{ maxHeight: "400px", overflowY: "auto" }}>
+                {studentsLoading ? (
+                  <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}>
+                    <div className="spinner"></div>
+                  </div>
+                ) : courseStudents.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-secondary)" }}>
+                    Chưa có sinh viên nào đăng ký lớp này.
+                  </div>
+                ) : (
+                  <table className="custom-table">
+                    <thead>
+                      <tr>
+                        <th>Mã SV</th>
+                        <th>Họ tên</th>
+                        <th>Email</th>
+                        <th>Khoa/Ngành</th>
+                        <th style={{ textAlign: "center" }}>Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {courseStudents.map((student, idx) => (
+                        <tr key={idx}>
+                          <td style={{ fontWeight: "600", color: "var(--primary)" }}>{student.studentCode}</td>
+                          <td>{student.fullName}</td>
+                          <td>{student.email}</td>
+                          <td>{student.departmentName || "Chưa có"}</td>
+                          <td style={{ textAlign: "center" }}>
+                            <span
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: "4px",
+                                backgroundColor:
+                                  student.status === "ACTIVE"
+                                    ? "#c8e6c9"
+                                    : student.status === "SUSPENDED"
+                                      ? "#ffcccc"
+                                      : "#e8f5e9",
+                                color:
+                                  student.status === "ACTIVE"
+                                    ? "#2e7d32"
+                                    : student.status === "SUSPENDED"
+                                      ? "#c62828"
+                                      : "#1b5e20",
+                                fontSize: "0.85rem",
+                                fontWeight: "500",
+                              }}
+                            >
+                              {student.status === "ACTIVE"
+                                ? "Đang học"
+                                : student.status === "SUSPENDED"
+                                  ? "Tạm ngừng"
+                                  : student.status === "DROPPED_OUT"
+                                    ? "Thôi học"
+                                    : "Tốt nghiệp"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setIsStudentModalOpen(false)}>
+                  Đóng
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -1,5 +1,6 @@
 package com.datct.datn.modules.course.DTO;
 
+import com.datct.datn.modules.course.entity.CourseStatus;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,4 +17,6 @@ public class UpdateCourseRequest {
     private String courseCode;
 
     private Integer maxStudents;
+
+    private CourseStatus status;
 }
