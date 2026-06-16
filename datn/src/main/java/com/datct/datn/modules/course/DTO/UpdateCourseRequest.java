@@ -19,4 +19,10 @@ public class UpdateCourseRequest {
     private Integer maxStudents;
 
     private CourseStatus status;
+
+    private String weekPattern;
+
+    private String openingBatch;
+
+    private Double midtermWeight;
 }

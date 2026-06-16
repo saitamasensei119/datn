@@ -6,7 +6,6 @@ import {
   Trash2,
   X,
   AlertTriangle,
-  BookMarked,
 } from "lucide-react";
 import AdminLayout from "../../components/AdminLayout";
 
@@ -22,7 +21,30 @@ interface Subject {
   credits: number;
   departmentName: string;
   departmentId?: number;
+  englishName?: string;
+  subjectType: string;
+  labRequirement?: string;
+  programCode?: string;
+  note?: string;
 }
+
+const getSubjectTypeLabel = (type: string) => {
+  switch (type) {
+    case "BT": return "Bài tập (BT)";
+    case "ĐA": return "Đồ án (ĐA)";
+    case "ĐATN": return "Đồ án tốt nghiệp (ĐATN)";
+    case "ĐATNKS": return "Đồ án tốt nghiệp KS (ĐATNKS)";
+    case "LT": return "Lý thuyết (LT)";
+    case "LT+BT": return "Lý thuyết + Bài tập (LT+BT)";
+    case "TH": return "Thực hành (TH)";
+    case "TN": return "Thí nghiệm (TN)";
+    case "TT": return "Thực tập (TT)";
+    case "TTKS": return "Thực tập KS (TTKS)";
+    case "TTKT": return "Thực tập Kỹ thuật (TTKT)";
+    case "TTTN": return "Thực tập tốt nghiệp (TTTN)";
+    default: return type;
+  }
+};
 
 const Subjects: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -41,6 +63,11 @@ const Subjects: React.FC = () => {
   const [name, setName] = useState("");
   const [credits, setCredits] = useState<number>(3);
   const [departmentId, setDepartmentId] = useState<string>("");
+  const [englishName, setEnglishName] = useState("");
+  const [subjectType, setSubjectType] = useState("LT");
+  const [labRequirement, setLabRequirement] = useState("");
+  const [programCode, setProgramCode] = useState("");
+  const [note, setNote] = useState("");
 
   const fetchData = async () => {
     setLoading(true);
@@ -58,6 +85,11 @@ const Subjects: React.FC = () => {
         credits: subj.credits,
         departmentName: subj.departmentName || "Chưa phân khoa",
         departmentId: subj.departmentId,
+        englishName: subj.englishName || "",
+        subjectType: subj.subjectType || "LT",
+        labRequirement: subj.labRequirement || "",
+        programCode: subj.programCode || "",
+        note: subj.note || "",
       }));
 
       setSubjects(mappedSubjects);
@@ -80,6 +112,11 @@ const Subjects: React.FC = () => {
     setName("");
     setCredits(3);
     setDepartmentId(departments[0]?.id.toString() || "");
+    setEnglishName("");
+    setSubjectType("LT");
+    setLabRequirement("");
+    setProgramCode("");
+    setNote("");
     setSelectedId(null);
     setIsModalOpen(true);
   };
@@ -90,6 +127,11 @@ const Subjects: React.FC = () => {
     setName(subj.name);
     setCredits(subj.credits);
     setDepartmentId(subj.departmentId?.toString() || "");
+    setEnglishName(subj.englishName || "");
+    setSubjectType(subj.subjectType || "LT");
+    setLabRequirement(subj.labRequirement || "");
+    setProgramCode(subj.programCode || "");
+    setNote(subj.note || "");
     setSelectedId(subj.id);
     setIsModalOpen(true);
   };
@@ -113,6 +155,11 @@ const Subjects: React.FC = () => {
       name,
       credits: Number(credits),
       departmentId: Number(departmentId),
+      englishName,
+      subjectType,
+      labRequirement,
+      programCode,
+      note,
     };
 
     try {
@@ -221,9 +268,12 @@ const Subjects: React.FC = () => {
                 <tr>
                   <th style={{ width: "120px" }}>Mã môn học</th>
                   <th>Tên môn học</th>
+                  <th>Tên tiếng Anh</th>
+                  <th>Loại môn học</th>
                   <th style={{ width: "100px", textAlign: "center" }}>
                     Số tín chỉ
                   </th>
+                  <th>Mã CTĐT</th>
                   <th>Thuộc Khoa/Ngành</th>
                   <th style={{ width: "120px", textAlign: "center" }}>
                     Thao tác
@@ -237,11 +287,18 @@ const Subjects: React.FC = () => {
                       {subj.subjectCode}
                     </td>
                     <td style={{ fontWeight: "500" }}>{subj.name}</td>
+                    <td>{subj.englishName || <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Chưa có</span>}</td>
+                    <td>
+                      <span className="badge badge-secondary" style={{ backgroundColor: "rgba(255, 255, 255, 0.1)", border: "1px solid var(--card-border)" }}>
+                        {getSubjectTypeLabel(subj.subjectType)}
+                      </span>
+                    </td>
                     <td style={{ textAlign: "center" }}>
                       <span className="badge badge-info">
                         {subj.credits} TC
                       </span>
                     </td>
+                    <td>{subj.programCode || <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Chưa có</span>}</td>
                     <td>{subj.departmentName}</td>
                     <td style={{ textAlign: "center" }}>
                       <div
@@ -270,9 +327,10 @@ const Subjects: React.FC = () => {
             </table>
           </div>
         )}
+      </div>
 
-        {/* Create / Edit Modal */}
-        {isModalOpen && (
+      {/* Create / Edit Modal */}
+      {isModalOpen && (
           <div className="modal-overlay">
             <div className="modal-content">
               <div className="modal-header">
@@ -331,6 +389,20 @@ const Subjects: React.FC = () => {
                   </div>
 
                   <div className="form-group">
+                    <label className="form-label" htmlFor="subj-english-name">
+                      Tên môn học tiếng Anh
+                    </label>
+                    <input
+                      id="subj-english-name"
+                      type="text"
+                      className="form-control"
+                      placeholder="Ví dụ: Computer Networks"
+                      value={englishName}
+                      onChange={(e) => setEnglishName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
                     <label className="form-label" htmlFor="subj-credits">
                       Số tín chỉ{" "}
                       <span style={{ color: "var(--danger)" }}>*</span>
@@ -344,6 +416,74 @@ const Subjects: React.FC = () => {
                       value={credits}
                       onChange={(e) => setCredits(Number(e.target.value))}
                       required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="subj-type">
+                      Loại môn học <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <select
+                      id="subj-type"
+                      className="form-control"
+                      value={subjectType}
+                      onChange={(e) => setSubjectType(e.target.value)}
+                      required
+                    >
+                      <option value="LT">Lý thuyết (LT)</option>
+                      <option value="BT">Bài tập (BT)</option>
+                      <option value="LT+BT">Lý thuyết + Bài tập (LT+BT)</option>
+                      <option value="TH">Thực hành (TH)</option>
+                      <option value="TN">Thí nghiệm (TN)</option>
+                      <option value="ĐA">Đồ án (ĐA)</option>
+                      <option value="ĐATN">Đồ án tốt nghiệp (ĐATN)</option>
+                      <option value="ĐATNKS">Đồ án tốt nghiệp KS (ĐATNKS)</option>
+                      <option value="TT">Thực tập (TT)</option>
+                      <option value="TTKS">Thực tập KS (TTKS)</option>
+                      <option value="TTKT">Thực tập Kỹ thuật (TTKT)</option>
+                      <option value="TTTN">Thực tập tốt nghiệp (TTTN)</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="subj-program-code">
+                      Mã CTĐT (Program Code)
+                    </label>
+                    <input
+                      id="subj-program-code"
+                      type="text"
+                      className="form-control"
+                      placeholder="Ví dụ: KTPM-2022"
+                      value={programCode}
+                      onChange={(e) => setProgramCode(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="subj-lab">
+                      Yêu cầu phòng thí nghiệm/máy tính
+                    </label>
+                    <input
+                      id="subj-lab"
+                      type="text"
+                      className="form-control"
+                      placeholder="Ví dụ: Phòng máy PC, Server..."
+                      value={labRequirement}
+                      onChange={(e) => setLabRequirement(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="subj-note">
+                      Ghi chú
+                    </label>
+                    <textarea
+                      id="subj-note"
+                      className="form-control"
+                      placeholder="Thông tin thêm..."
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      style={{ minHeight: "80px", resize: "vertical" }}
                     />
                   </div>
 
@@ -399,7 +539,6 @@ const Subjects: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
     </AdminLayout>
   );
 };

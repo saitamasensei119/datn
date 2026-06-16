@@ -17,6 +17,7 @@ public interface CourseRepository
             String courseCode
     );
     List<Course> findByLecturerId(Long lecturerId);
+    List<Course> findByCourseCodeContainingIgnoreCase(String courseCode);
     Page<Course> findByStatus(
             CourseStatus status,
             Pageable pageable

@@ -4,10 +4,7 @@ import com.datct.datn.modules.enrollment.DTO.EnrollmentRequest;
 import com.datct.datn.modules.enrollment.service.EnrollmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/admin/enrollments")
@@ -26,5 +23,13 @@ public class AdminEnrollmentController {
         return ResponseEntity.ok(
                 "Enroll success"
         );
+    }
+
+    @DeleteMapping
+    public ResponseEntity<String> unenroll(
+            @RequestBody EnrollmentRequest request
+    ) {
+        enrollmentService.unenrollByAdmin(request.getStudentId(), request.getCourseId());
+        return ResponseEntity.ok("Unenrolled successfully");
     }
 }

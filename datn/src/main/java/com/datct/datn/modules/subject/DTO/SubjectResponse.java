@@ -20,4 +20,14 @@ public class SubjectResponse {
     private Long departmentId;
 
     private String departmentName;
+
+    private String englishName;
+
+    private String subjectType;
+
+    private String labRequirement;
+
+    private String programCode;
+
+    private String note;
 }

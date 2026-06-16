@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import TeacherLayout from "../../components/TeacherLayout";
-import { courseApi } from "../../services/api";
-import { BookOpen, Users, X } from "lucide-react";
+import { courseApi, teacherGradeApi } from "../../services/api";
+import { BookOpen, Users, Edit3, X, Save, Lock } from "lucide-react";
 import "./TeacherCourses.css";
 
 interface Course {
@@ -21,6 +21,15 @@ const TeacherCourses: React.FC = () => {
   const [courseStudents, setCourseStudents] = useState<any[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [selectedCourseName, setSelectedCourseName] = useState("");
+  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
+
+  // Grade Modal State
+  const [isGradeModalOpen, setIsGradeModalOpen] = useState(false);
+  const [gradesLoading, setGradesLoading] = useState(false);
+  const [courseGrades, setCourseGrades] = useState<any[]>([]);
+  const [midtermSubmitted, setMidtermSubmitted] = useState(false);
+  const [finalSubmitted, setFinalSubmitted] = useState(false);
+  const [savingGrades, setSavingGrades] = useState(false);
 
   const openStudentModal = async (course: Course) => {
     setSelectedCourseName(course.code + " - " + course.name);
@@ -35,6 +44,97 @@ const TeacherCourses: React.FC = () => {
       alert("Không thể tải danh sách sinh viên.");
     } finally {
       setStudentsLoading(false);
+    }
+  };
+
+  const openGradeModal = async (course: Course) => {
+    setSelectedCourseName(course.code + " - " + course.name);
+    setSelectedCourseId(course.id);
+    setIsGradeModalOpen(true);
+    setGradesLoading(true);
+    setCourseGrades([]);
+    setMidtermSubmitted(false);
+    setFinalSubmitted(false);
+    try {
+      const [gradesRes, submissionsRes] = await Promise.all([
+        teacherGradeApi.getGrades(course.id),
+        teacherGradeApi.getSubmissions(course.id),
+      ]);
+      setCourseGrades(gradesRes.data);
+      const submissions = submissionsRes.data;
+      const midtermSub = submissions.find((s: any) => s.gradeType === "MIDTERM");
+      const finalSub = submissions.find((s: any) => s.gradeType === "FINAL");
+      setMidtermSubmitted(midtermSub?.status === "SUBMITTED");
+      setFinalSubmitted(finalSub?.status === "SUBMITTED");
+    } catch (err) {
+      console.error(err);
+      alert("Không thể tải dữ liệu điểm.");
+    } finally {
+      setGradesLoading(false);
+    }
+  };
+
+  const handleGradeChange = (enrollmentId: number, field: "midtermScore" | "finalScore", value: string) => {
+    setCourseGrades((prev) =>
+      prev.map((g) => {
+        if (g.enrollmentId === enrollmentId) {
+          return { ...g, [field]: value === "" ? null : Number(value) };
+        }
+        return g;
+      })
+    );
+  };
+
+  const handleSaveGrades = async () => {
+    if (!selectedCourseId) return;
+    setSavingGrades(true);
+    try {
+      const payload = courseGrades.map((g) => ({
+        enrollmentId: g.enrollmentId,
+        midtermScore: g.midtermScore,
+        finalScore: g.finalScore,
+      }));
+      await teacherGradeApi.updateGrades(selectedCourseId, payload);
+      alert("Lưu điểm thành công!");
+      // reload grades to get updated totalScore
+      const gradesRes = await teacherGradeApi.getGrades(selectedCourseId);
+      setCourseGrades(gradesRes.data);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data || "Lỗi khi lưu điểm.");
+    } finally {
+      setSavingGrades(false);
+    }
+  };
+
+  const handleSubmitGrades = async (type: "midterm" | "final") => {
+    if (!selectedCourseId) return;
+    if (!window.confirm(`Bạn có chắc muốn chốt điểm ${type === "midterm" ? "giữa kỳ" : "cuối kỳ"} không? Sau khi chốt sẽ không thể sửa.`)) {
+      return;
+    }
+    setSavingGrades(true);
+    try {
+      // Auto-save before submitting just in case
+      const payload = courseGrades.map((g) => ({
+        enrollmentId: g.enrollmentId,
+        midtermScore: g.midtermScore,
+        finalScore: g.finalScore,
+      }));
+      await teacherGradeApi.updateGrades(selectedCourseId, payload);
+      
+      if (type === "midterm") {
+        await teacherGradeApi.submitMidterm(selectedCourseId);
+        setMidtermSubmitted(true);
+      } else {
+        await teacherGradeApi.submitFinal(selectedCourseId);
+        setFinalSubmitted(true);
+      }
+      alert(`Đã chốt điểm ${type === "midterm" ? "giữa kỳ" : "cuối kỳ"} thành công!`);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data || "Lỗi khi chốt điểm.");
+    } finally {
+      setSavingGrades(false);
     }
   };
 
@@ -112,6 +212,13 @@ const TeacherCourses: React.FC = () => {
                     onClick={() => openStudentModal(course)}
                   >
                     Xem Danh Sách SV
+                  </button>
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => openGradeModal(course)}
+                    style={{ marginLeft: '8px' }}
+                  >
+                    <Edit3 size={16} style={{ marginRight: '4px' }} /> Nhập Điểm
                   </button>
                 </div>
               </div>
@@ -196,6 +303,106 @@ const TeacherCourses: React.FC = () => {
                 <button className="btn btn-secondary" onClick={() => setIsStudentModalOpen(false)}>
                   Đóng
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Grade Modal */}
+        {isGradeModalOpen && (
+          <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: "800px" }}>
+              <div className="modal-header">
+                <h3 className="modal-title">Nhập Điểm Lớp: {selectedCourseName}</h3>
+                <button className="modal-close" onClick={() => setIsGradeModalOpen(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="modal-body" style={{ maxHeight: "500px", overflowY: "auto" }}>
+                {gradesLoading ? (
+                  <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}>
+                    <div className="spinner"></div>
+                  </div>
+                ) : courseGrades.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-secondary)" }}>
+                    Chưa có dữ liệu sinh viên hoặc điểm.
+                  </div>
+                ) : (
+                  <table className="custom-table" style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        <th style={{ padding: "10px", borderBottom: "1px solid var(--card-border)" }}>Mã SV</th>
+                        <th style={{ padding: "10px", borderBottom: "1px solid var(--card-border)" }}>Họ tên</th>
+                        <th style={{ padding: "10px", borderBottom: "1px solid var(--card-border)", textAlign: "center" }}>Giữa Kỳ</th>
+                        <th style={{ padding: "10px", borderBottom: "1px solid var(--card-border)", textAlign: "center" }}>Cuối Kỳ</th>
+                        <th style={{ padding: "10px", borderBottom: "1px solid var(--card-border)", textAlign: "center" }}>Tổng Kết</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {courseGrades.map((grade, idx) => (
+                        <tr key={idx}>
+                          <td style={{ padding: "10px", borderBottom: "1px solid var(--card-border)", fontWeight: "600", color: "var(--primary)" }}>{grade.studentCode}</td>
+                          <td style={{ padding: "10px", borderBottom: "1px solid var(--card-border)" }}>{grade.fullName}</td>
+                          <td style={{ padding: "10px", borderBottom: "1px solid var(--card-border)", textAlign: "center" }}>
+                            <input
+                              type="number"
+                              min="0"
+                              max="10"
+                              step="0.1"
+                              value={grade.midtermScore ?? ""}
+                              onChange={(e) => handleGradeChange(grade.enrollmentId, "midtermScore", e.target.value)}
+                              disabled={midtermSubmitted || savingGrades}
+                              style={{ width: "70px", padding: "4px", textAlign: "center", border: "1px solid #ccc", borderRadius: "4px", backgroundColor: midtermSubmitted ? "#f5f5f5" : "white" }}
+                            />
+                          </td>
+                          <td style={{ padding: "10px", borderBottom: "1px solid var(--card-border)", textAlign: "center" }}>
+                            <input
+                              type="number"
+                              min="0"
+                              max="10"
+                              step="0.1"
+                              value={grade.finalScore ?? ""}
+                              onChange={(e) => handleGradeChange(grade.enrollmentId, "finalScore", e.target.value)}
+                              disabled={finalSubmitted || savingGrades}
+                              style={{ width: "70px", padding: "4px", textAlign: "center", border: "1px solid #ccc", borderRadius: "4px", backgroundColor: finalSubmitted ? "#f5f5f5" : "white" }}
+                            />
+                          </td>
+                          <td style={{ padding: "10px", borderBottom: "1px solid var(--card-border)", textAlign: "center", fontWeight: "bold" }}>
+                            {grade.totalScore !== null ? grade.totalScore : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <div className="modal-footer" style={{ display: "flex", justifyContent: "space-between" }}>
+                <div>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleSaveGrades}
+                    disabled={gradesLoading || savingGrades || (midtermSubmitted && finalSubmitted)}
+                  >
+                    <Save size={16} style={{ marginRight: '4px' }} /> Lưu Nháp
+                  </button>
+                </div>
+                <div>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => handleSubmitGrades("midterm")}
+                    disabled={gradesLoading || savingGrades || midtermSubmitted}
+                    style={{ marginRight: '8px' }}
+                  >
+                    <Lock size={16} style={{ marginRight: '4px' }} /> Chốt Giữa Kỳ
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => handleSubmitGrades("final")}
+                    disabled={gradesLoading || savingGrades || finalSubmitted}
+                  >
+                    <Lock size={16} style={{ marginRight: '4px' }} /> Chốt Cuối Kỳ
+                  </button>
+                </div>
               </div>
             </div>
           </div>

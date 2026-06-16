@@ -250,9 +250,10 @@ const Semesters: React.FC = () => {
             </table>
           </div>
         )}
+      </div>
 
-        {/* Create / Edit Modal */}
-        {isModalOpen && (
+      {/* Create / Edit Modal */}
+      {isModalOpen && (
           <div className="modal-overlay">
             <div className="modal-content">
               <div className="modal-header">
@@ -340,7 +341,6 @@ const Semesters: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
     </AdminLayout>
   );
 };

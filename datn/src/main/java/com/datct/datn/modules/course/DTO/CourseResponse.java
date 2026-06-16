@@ -23,4 +23,16 @@ public class CourseResponse {
     private String semesterName;
 
     private CourseStatus status;
+
+    private Long subjectId;
+
+    private Long lecturerId;
+
+    private Long semesterId;
+
+    private String weekPattern;
+
+    private String openingBatch;
+
+    private Double midtermWeight;
 }

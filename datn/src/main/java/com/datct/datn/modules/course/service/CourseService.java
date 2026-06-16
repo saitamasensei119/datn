@@ -10,6 +10,8 @@ import com.datct.datn.modules.course.entity.CourseStatus;
 import com.datct.datn.modules.course.entity.Semester;
 import com.datct.datn.modules.course.repository.CourseRepository;
 import com.datct.datn.modules.course.repository.SemesterRepository;
+import com.datct.datn.modules.grade.entity.GradeSubmission;
+import com.datct.datn.modules.grade.repository.GradeSubmissionRepository;
 import com.datct.datn.modules.enrollment.repository.EnrollmentRepository;
 import com.datct.datn.modules.lecturer.entity.Lecturer;
 import com.datct.datn.modules.lecturer.repository.LecturerRepository;
@@ -40,6 +42,7 @@ public class CourseService {
 
     private final SemesterRepository semesterRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final GradeSubmissionRepository gradeSubmissionRepository;
 
     public CourseResponse create(
             CreateCourseRequest request
@@ -104,8 +107,32 @@ public class CourseService {
 
         course.setLecturer(lecturer);
 
+        course.setWeekPattern(request.getWeekPattern());
+
+        course.setOpeningBatch(request.getOpeningBatch());
+
+        com.datct.datn.modules.grade.entity.GradeComponent gradeComponent = new com.datct.datn.modules.grade.entity.GradeComponent();
+        gradeComponent.setCourse(course);
+        gradeComponent.setMidtermWeight(request.getMidtermWeight());
+        course.setGradeComponent(gradeComponent);
+
         Course saved =
                 courseRepository.save(course);
+
+        GradeSubmission midtermSubmission = GradeSubmission.builder()
+                .course(saved)
+                .gradeType("MIDTERM")
+                .status("NOT_SUBMITTED")
+                .build();
+                
+        GradeSubmission finalSubmission = GradeSubmission.builder()
+                .course(saved)
+                .gradeType("FINAL")
+                .status("NOT_SUBMITTED")
+                .build();
+                
+        gradeSubmissionRepository.save(midtermSubmission);
+        gradeSubmissionRepository.save(finalSubmission);
 
         return mapToResponse(saved);
     }
@@ -113,6 +140,16 @@ public class CourseService {
     public List<CourseResponse> getAll() {
 
         return courseRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public List<CourseResponse> searchAdminCourses(String courseCode) {
+        if (courseCode == null || courseCode.trim().isEmpty()) {
+            return getAll();
+        }
+        return courseRepository.findByCourseCodeContainingIgnoreCase(courseCode)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -192,6 +229,17 @@ public class CourseService {
         course.setStatus(
                 request.getStatus()
         );
+        course.setWeekPattern(request.getWeekPattern());
+        course.setOpeningBatch(request.getOpeningBatch());
+
+        if (course.getGradeComponent() != null) {
+            course.getGradeComponent().setMidtermWeight(request.getMidtermWeight());
+        } else {
+            com.datct.datn.modules.grade.entity.GradeComponent gc = new com.datct.datn.modules.grade.entity.GradeComponent();
+            gc.setCourse(course);
+            gc.setMidtermWeight(request.getMidtermWeight());
+            course.setGradeComponent(gc);
+        }
 
         Course updated =
                 courseRepository.save(course);
@@ -303,6 +351,30 @@ public class CourseService {
                 .toList();
     }
 
+    public List<StudentResponse> searchStudentsByCourseIdAndStudentCode(Long courseId, String studentCode) {
+        if (studentCode == null || studentCode.trim().isEmpty()) {
+            return getStudentsByCourseId(courseId);
+        }
+        
+        List<Student> students = enrollmentRepository.searchStudentsByCourseIdAndStudentCode(courseId, studentCode);
+        
+        return students.stream()
+                .map(student ->
+                        new StudentResponse(
+                                student.getId(),
+                                student.getUser().getFullName(),
+                                student.getUser().getEmail(),
+                                student.getStudentCode(),
+                                student.getDepartment() != null
+                                        ? student.getDepartment().getId()
+                                        : null,
+                                student.getDepartment() != null ? student.getDepartment().getName() : null,
+                                student.getStatus()
+                        )
+                )
+                .toList();
+    }
+
 
 
     private CourseResponse mapToResponse(
@@ -320,7 +392,13 @@ public class CourseService {
                         .getFullName()
                         : null,
                 course.getSemester().getName(),
-                course.getStatus()
+                course.getStatus(),
+                course.getSubject().getId(),
+                course.getLecturer() != null ? course.getLecturer().getId() : null,
+                course.getSemester().getId(),
+                course.getWeekPattern(),
+                course.getOpeningBatch(),
+                course.getGradeComponent() != null ? course.getGradeComponent().getMidtermWeight() : null
         );
     }
 }

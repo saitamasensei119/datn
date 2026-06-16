@@ -12,40 +12,57 @@ interface MyCourse {
   credits?: number;
   startDate?: string;
   endDate?: string;
-  status?: "ongoing" | "completed" | "upcoming";
+  status?: string;
 }
 
 const StudentMyCourses: React.FC = () => {
   const [courses, setCourses] = useState<MyCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const fetchCourses = async () => {
+    try {
+      const response = await enrollmentApi.getMyEnrollments();
+      const data = response.data || [];
+      const mappedCourses = data.map((item: any) => ({
+        id: item.course?.id || item.id,
+        name: item.course?.subjectName || item.subjectName || item.name || "Chưa có tên",
+        code: item.course?.courseCode || item.courseCode || item.code || "N/A",
+        lecturer: item.course?.lecturerName || item.lecturerName || item.lecturer,
+        credits: item.course?.credits || item.credits,
+        status: item.course?.status || item.status,
+        startDate: item.course?.startDate || item.startDate,
+        endDate: item.course?.endDate || item.endDate
+      }));
+      setCourses(mappedCourses);
+    } catch (err) {
+      console.error(err);
+      setError("Không thể tải dữ liệu lớp học phần");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const response = await enrollmentApi.getMyEnrollments();
-        const data = response.data || [];
-        const mappedCourses = data.map((item: any) => ({
-          id: item.course?.id || item.id,
-          name: item.course?.subjectName || item.subjectName || item.name || "Chưa có tên",
-          code: item.course?.courseCode || item.courseCode || item.code || "N/A",
-          lecturer: item.course?.lecturerName || item.lecturerName || item.lecturer,
-          credits: item.course?.credits || item.credits,
-          status: item.course?.status || item.status,
-          startDate: item.course?.startDate || item.startDate,
-          endDate: item.course?.endDate || item.endDate
-        }));
-        setCourses(mappedCourses);
-      } catch (err) {
-        console.error(err);
-        setError("Không thể tải dữ liệu lớp học phần");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchCourses();
   }, []);
+
+  const handleUnenroll = async (courseId: number) => {
+    if (!window.confirm("Bạn có chắc chắn muốn hủy đăng ký lớp học phần này không?")) return;
+    setError("");
+    setSuccess("");
+    try {
+      await enrollmentApi.unenroll(courseId);
+      setSuccess("Hủy đăng ký lớp học phần thành công");
+      fetchCourses();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || "Không thể hủy đăng ký lớp học phần");
+      setTimeout(() => setError(""), 5000);
+    }
+  };
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -95,6 +112,7 @@ const StudentMyCourses: React.FC = () => {
     <StudentLayout>
       <div className="page-container">
         {error && <div className="alert alert-danger">{error}</div>}
+        {success && <div className="alert alert-success">{success}</div>}
 
         <div className="page-header">
           <h2>Lớp Học Phần Của Tôi</h2>
@@ -149,6 +167,15 @@ const StudentMyCourses: React.FC = () => {
                   </div>
                 </div>
                 <div className="course-actions">
+                  {course.status === "OPEN" && (
+                    <button
+                      className="btn btn-sm btn-danger"
+                      style={{ marginRight: "8px" }}
+                      onClick={() => handleUnenroll(course.id)}
+                    >
+                      Hủy Đăng Ký
+                    </button>
+                  )}
                   <a
                     href={`/student/my-courses/${course.id}`}
                     className="btn btn-sm btn-primary"

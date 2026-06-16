@@ -585,9 +585,10 @@ const Students: React.FC = () => {
             </button>
           </div>
         )}
+      </div>
 
-        {/* Create / Edit Modal */}
-        {isModalOpen && (
+      {/* Create / Edit Modal */}
+      {isModalOpen && (
           <div className="modal-overlay">
             <div className="modal-content">
               <div className="modal-header">
@@ -773,7 +774,6 @@ const Students: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
     </AdminLayout>
   );
 };

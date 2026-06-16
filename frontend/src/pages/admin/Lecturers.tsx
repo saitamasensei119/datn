@@ -189,10 +189,16 @@ const Lecturers: React.FC = () => {
     }
   };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setError("");
+  };
+
   return (
-    <AdminLayout>
-      <div className="glass-card">
-        <div className="page-header-flex">
+    <>
+      <AdminLayout>
+        <div className="glass-card">
+          <div className="page-header-flex">
           <div>
             <h2 className="page-title" style={{ margin: 0 }}>
               Quản Lý Giảng Viên
@@ -330,9 +336,11 @@ const Lecturers: React.FC = () => {
             </table>
           </div>
         )}
+      </div>
+      </AdminLayout>
 
-        {/* Status Change Modal */}
-        {statusChangeId !== null && (
+      {/* Status Change Modal */}
+      {statusChangeId !== null && (
           <div className="modal-overlay">
             <div className="modal-content" style={{ maxWidth: "400px" }}>
               <div className="modal-header">
@@ -377,16 +385,16 @@ const Lecturers: React.FC = () => {
         {/* Create / Edit Modal */}
         {isModalOpen && (
           <div className="modal-overlay">
-            <div className="modal-content" style={{ marginTop: "200px" }}>
+            <div className="modal-content">
               <div className="modal-header">
                 <h3 className="modal-title">
                   {modalType === "create"
                     ? "Thêm giảng viên mới"
                     : "Cập nhật thông tin"}
                 </h3>
-                {/* <button className="modal-close" onClick={handleCloseModal}>
+                <button className="modal-close" onClick={handleCloseModal}>
                   <X size={18} />
-                </button> */}
+                </button>
               </div>
 
               <form onSubmit={handleSubmit}>
@@ -499,13 +507,13 @@ const Lecturers: React.FC = () => {
                 </div>
 
                 <div className="modal-footer">
-                  {/* <button
+                  <button
                     type="button"
                     className="btn btn-secondary"
                     onClick={handleCloseModal}
                   >
                     Hủy
-                  </button> */}
+                  </button>
                   <button
                     type="submit"
                     className="btn btn-primary"
@@ -518,8 +526,7 @@ const Lecturers: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
-    </AdminLayout>
+    </>
   );
 };
 

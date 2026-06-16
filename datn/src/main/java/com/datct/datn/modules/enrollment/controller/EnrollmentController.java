@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/enrollments")
+@RequestMapping("/api/student/enrollments")
 @RequiredArgsConstructor
 public class EnrollmentController {
 
@@ -32,5 +32,13 @@ public class EnrollmentController {
     public List<StudentCourseResponse> getStudentEnroll() {
 
         return enrollmentService.getStudentEnroll();
+    }
+
+    @DeleteMapping("/{courseId}")
+    public ResponseEntity<String> unenroll(
+            @PathVariable Long courseId
+    ) {
+        enrollmentService.unenroll(courseId);
+        return ResponseEntity.ok("Unenrolled successfully");
     }
 }

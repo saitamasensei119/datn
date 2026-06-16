@@ -14,4 +14,14 @@ public class CreateSubjectRequest {
     private Integer credits;
 
     private Long departmentId;
+
+    private String englishName;
+
+    private String subjectType;
+
+    private String labRequirement;
+
+    private String programCode;
+
+    private String note;
 }

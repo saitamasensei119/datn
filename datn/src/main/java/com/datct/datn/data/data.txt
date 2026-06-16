@@ -90,6 +90,14 @@ CREATE TABLE subjects (
     id BIGSERIAL PRIMARY KEY,
     subject_code VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
+
+    english_name VARCHAR(255),
+    subject_type VARCHAR(30) NOT NULL,
+    // BT, ĐA, ĐATN, ĐATNKS, LT, LT+BT, TH, TN, TT, TTKS, TTKT, TTTN
+    lab_requirement VARCHAR(20),
+    program_code VARCHAR(50),
+    note TEXT,
+
     credits INT NOT NULL,
     department_id BIGINT,
 
@@ -114,6 +122,9 @@ CREATE TABLE courses (
     IN_PROGRESS,  // đang học
     COMPLETED,    // kết thúc
     CANCELLED     // hủy
+
+    week_pattern VARCHAR(100),
+    opening_batch VARCHAR(2) NOT NULL,
 
     CONSTRAINT fk_courses_subject
         FOREIGN KEY (subject_id)
@@ -229,4 +240,41 @@ CREATE TABLE posts (
         FOREIGN KEY (author_id)
         REFERENCES users(id)
         ON DELETE SET NULL
+);
+
+-- =========================
+-- grade components
+-- =========================
+CREATE TABLE grade_components (
+    id BIGSERIAL PRIMARY KEY,
+    course_id BIGINT NOT NULL,
+
+    midterm_weight NUMERIC(4,2) NOT NULL,
+
+    CONSTRAINT fk_gc_course
+        FOREIGN KEY (course_id)
+        REFERENCES courses(id)
+);
+
+-- =========================
+-- grade submissions
+-- =========================
+CREATE TABLE grade_submissions (
+    id BIGSERIAL PRIMARY KEY,
+
+    course_id BIGINT NOT NULL,
+
+    grade_type VARCHAR(20) NOT NULL,
+    -- MIDTERM, FINAL
+
+    status VARCHAR(30) NOT NULL,
+    -- NOT_SUBMITTED  vẫn sửa điểm được
+    -- SUBMITTED      không sửa điểm được
+
+    submitted_at TIMESTAMP,
+    locked_at TIMESTAMP,
+
+    CONSTRAINT fk_gs_course
+        FOREIGN KEY (course_id)
+        REFERENCES courses(id)
 );

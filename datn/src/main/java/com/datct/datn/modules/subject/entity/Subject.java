@@ -30,6 +30,21 @@ public class Subject {
     @Column(nullable = false)
     private Integer credits;
 
+    @Column(name = "english_name")
+    private String englishName;
+
+    @Column(name = "subject_type", nullable = false)
+    private String subjectType;
+
+    @Column(name = "lab_requirement")
+    private String labRequirement;
+
+    @Column(name = "program_code")
+    private String programCode;
+
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     private Department department;

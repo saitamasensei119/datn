@@ -60,6 +60,11 @@ public class SubjectService {
         );
 
         subject.setDepartment(department);
+        subject.setEnglishName(request.getEnglishName());
+        subject.setSubjectType(request.getSubjectType());
+        subject.setLabRequirement(request.getLabRequirement());
+        subject.setProgramCode(request.getProgramCode());
+        subject.setNote(request.getNote());
 
         Subject saved =
                 subjectRepository.save(subject);
@@ -123,6 +128,11 @@ public class SubjectService {
         );
 
         subject.setDepartment(department);
+        subject.setEnglishName(request.getEnglishName());
+        subject.setSubjectType(request.getSubjectType());
+        subject.setLabRequirement(request.getLabRequirement());
+        subject.setProgramCode(request.getProgramCode());
+        subject.setNote(request.getNote());
 
         Subject updated =
                 subjectRepository.save(subject);
@@ -149,7 +159,12 @@ public class SubjectService {
                         : null,
                 subject.getDepartment() != null
                         ? subject.getDepartment().getName()
-                        : null
+                        : null,
+                subject.getEnglishName(),
+                subject.getSubjectType(),
+                subject.getLabRequirement(),
+                subject.getProgramCode(),
+                subject.getNote()
         );
     }
 }

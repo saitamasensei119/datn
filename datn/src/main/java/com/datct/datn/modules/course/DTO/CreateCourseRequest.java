@@ -16,4 +16,10 @@ public class CreateCourseRequest {
     private String courseCode;
 
     private Integer maxStudents;
+
+    private String weekPattern;
+
+    private String openingBatch;
+
+    private Double midtermWeight;
 }

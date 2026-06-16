@@ -4,6 +4,7 @@ import {
   subjectApi,
   lecturerApi,
   semesterApi,
+  adminEnrollmentApi,
 } from "../../services/api";
 import {
   Plus,
@@ -42,6 +43,9 @@ interface Course {
   lecturerId?: number;
   semesterId?: number;
   status?: string;
+  weekPattern?: string;
+  openingBatch?: string;
+  midtermWeight?: number;
 }
 
 const getStatusBadge = (status: string | undefined) => {
@@ -81,20 +85,25 @@ const Courses: React.FC = () => {
   const [lecturerId, setLecturerId] = useState<string>("");
   const [semesterId, setSemesterId] = useState<string>("");
   const [status, setStatus] = useState<string>("PLANNED");
+  const [weekPattern, setWeekPattern] = useState("");
+  const [openingBatch, setOpeningBatch] = useState("");
+  const [midtermWeight, setMidtermWeight] = useState<number>(0.3);
+
+  const [searchCourseCode, setSearchCourseCode] = useState("");
 
   // Student Modal State
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [courseStudents, setCourseStudents] = useState<any[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [selectedCourseName, setSelectedCourseName] = useState("");
+  const [searchStudentCode, setSearchStudentCode] = useState("");
 
-  const openStudentModal = async (course: Course) => {
-    setSelectedCourseName(course.courseCode + " - " + course.subjectName);
-    setIsStudentModalOpen(true);
+  const fetchCourseStudents = async (courseId: number, studentCodeSearch?: string) => {
     setStudentsLoading(true);
-    setCourseStudents([]);
     try {
-      const response = await courseApi.getStudentsByCourseAdmin(course.id);
+      const response = studentCodeSearch 
+        ? await courseApi.searchAdminCourseStudents(courseId, studentCodeSearch)
+        : await courseApi.getStudentsByCourseAdmin(courseId);
       setCourseStudents(response.data);
     } catch (err) {
       console.error(err);
@@ -104,11 +113,35 @@ const Courses: React.FC = () => {
     }
   };
 
-  const fetchData = async () => {
+  const openStudentModal = async (course: Course) => {
+    setSelectedCourseName(course.courseCode + " - " + course.subjectName);
+    setSelectedId(course.id);
+    setIsStudentModalOpen(true);
+    setSearchStudentCode("");
+    setCourseStudents([]);
+    await fetchCourseStudents(course.id);
+  };
+
+  const handleAdminUnenroll = async (studentId: number) => {
+    if (!selectedId) return;
+    if (!window.confirm("Bạn có chắc chắn muốn xóa sinh viên này khỏi lớp học phần?")) return;
+    try {
+      await adminEnrollmentApi.unenroll({ studentId, courseId: selectedId });
+      setSuccess("Đã xóa sinh viên khỏi lớp học phần.");
+      setTimeout(() => setSuccess(""), 3000);
+      // reload the students list
+      await fetchCourseStudents(selectedId, searchStudentCode);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || "Không thể xóa sinh viên.");
+    }
+  };
+
+  const fetchData = async (courseCodeSearch?: string) => {
     setLoading(true);
     try {
       const [courseRes, subjRes, lectRes, semRes] = await Promise.all([
-        courseApi.getAll(),
+        courseCodeSearch ? courseApi.searchAdminCourses(courseCodeSearch) : courseApi.getAll(),
         subjectApi.getAll(),
         lecturerApi.getAll(),
         semesterApi.getAll(),
@@ -123,6 +156,12 @@ const Courses: React.FC = () => {
         lecturerName: course.lecturerName || "Chưa có",
         semesterName: course.semesterName || "Chưa có",
         status: course.status || "PLANNED",
+        subjectId: course.subjectId,
+        lecturerId: course.lecturerId,
+        semesterId: course.semesterId,
+        weekPattern: course.weekPattern || "",
+        openingBatch: course.openingBatch || "",
+        midtermWeight: course.midtermWeight,
       }));
 
       setCourses(mappedCourses);
@@ -167,6 +206,9 @@ const Courses: React.FC = () => {
     setLecturerId(lecturers[0]?.id.toString() || "");
     setSemesterId(semesters[0]?.id.toString() || "");
     setStatus("PLANNED");
+    setWeekPattern("");
+    setOpeningBatch("");
+    setMidtermWeight(0.3);
     setSelectedId(null);
     setIsModalOpen(true);
     setError("");
@@ -180,6 +222,9 @@ const Courses: React.FC = () => {
     setLecturerId(course.lecturerId?.toString() || "");
     setSemesterId(course.semesterId?.toString() || "");
     setStatus(course.status || "PLANNED");
+    setWeekPattern(course.weekPattern || "");
+    setOpeningBatch(course.openingBatch || "");
+    setMidtermWeight(course.midtermWeight ?? 0.3);
     setSelectedId(course.id);
     setIsModalOpen(true);
     setError("");
@@ -199,7 +244,8 @@ const Courses: React.FC = () => {
       !subjectId ||
       !lecturerId ||
       !semesterId ||
-      maxStudents < 1
+      maxStudents < 1 ||
+      !openingBatch.trim()
     ) {
       setError(
         "Vui lòng điền đầy đủ các thông tin bắt buộc và số học sinh > 0.",
@@ -214,6 +260,9 @@ const Courses: React.FC = () => {
       semesterId: Number(semesterId),
       maxStudents: Number(maxStudents),
       status,
+      weekPattern,
+      openingBatch,
+      midtermWeight: Number(midtermWeight),
     };
 
     try {
@@ -225,7 +274,7 @@ const Courses: React.FC = () => {
         setSuccess("Cập nhật lớp học phần thành công!");
       }
       setIsModalOpen(false);
-      fetchData();
+      fetchData(searchCourseCode);
       setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
       console.error(err);
@@ -248,7 +297,7 @@ const Courses: React.FC = () => {
     try {
       await courseApi.delete(id);
       setSuccess("Xóa lớp học phần thành công!");
-      fetchData();
+      fetchData(searchCourseCode);
       setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
       console.error(err);
@@ -297,6 +346,35 @@ const Courses: React.FC = () => {
           </button>
         </div>
 
+        {/* Search Bar for Courses */}
+        <div style={{ marginBottom: "1.5rem", display: "flex", gap: "10px" }}>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Tìm kiếm theo mã lớp học phần..."
+            value={searchCourseCode}
+            onChange={(e) => setSearchCourseCode(e.target.value)}
+            style={{ maxWidth: "300px" }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") fetchData(searchCourseCode);
+            }}
+          />
+          <button className="btn btn-secondary" onClick={() => fetchData(searchCourseCode)}>
+            Tìm kiếm
+          </button>
+          {searchCourseCode && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setSearchCourseCode("");
+                fetchData("");
+              }}
+            >
+              Hủy tìm
+            </button>
+          )}
+        </div>
+
         {success && (
           <div className="alert alert-success" style={{ margin: "1rem 0" }}>
             <CheckCircle size={18} />
@@ -337,6 +415,8 @@ const Courses: React.FC = () => {
                   <th>Môn Học</th>
                   <th>Giảng Viên</th>
                   <th>Học Kỳ</th>
+                  <th style={{ width: "80px", textAlign: "center" }}>Đợt mở</th>
+                  <th>Lịch học</th>
                   <th style={{ width: "80px", textAlign: "center" }}>Sĩ Số</th>
                   <th style={{ width: "100px", textAlign: "center" }}>
                     Trạng Thái
@@ -353,8 +433,14 @@ const Courses: React.FC = () => {
                       {course.courseCode}
                     </td>
                     <td>{course.subjectName}</td>
-                    <td>{course.lecturerName}</td>
+                     <td>{course.lecturerName}</td>
                     <td>{course.semesterName}</td>
+                    <td style={{ textAlign: "center" }}>
+                      <span className="badge badge-secondary" style={{ backgroundColor: "rgba(255, 255, 255, 0.1)", border: "1px solid var(--card-border)" }}>
+                        {course.openingBatch || "Chưa có"}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: "0.9rem" }}>{course.weekPattern || "Chưa có"}</td>
                     <td style={{ textAlign: "center" }}>
                       {course.maxStudents}
                     </td>
@@ -406,12 +492,13 @@ const Courses: React.FC = () => {
             </table>
           </div>
         )}
+      </div>
 
-        {/* Create / Edit Modal */}
-        {isModalOpen && (
-          <div className="modal-overlay">
-            <div className="modal-content" style={{ marginTop: "200px" }}>
-              <div className="modal-header">
+      {/* Create / Edit Modal */}
+      {isModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
                 <h3 className="modal-title">
                   {modalType === "create"
                     ? "Tạo lớp học phần mới"
@@ -514,6 +601,26 @@ const Courses: React.FC = () => {
 
                   <div className="form-group">
                     <label className="form-label">
+                      Tỷ Trọng Điểm Giữa Kỳ{" "}
+                      <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="1"
+                      className="form-control"
+                      value={midtermWeight}
+                      onChange={(e) => setMidtermWeight(Number(e.target.value))}
+                      required
+                    />
+                    <small style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "4px", display: "block" }}>
+                      Ví dụ: 0.3 (tương đương 30%)
+                    </small>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
                       Sĩ Số Tối Đa{" "}
                       <span style={{ color: "var(--danger)" }}>*</span>
                     </label>
@@ -525,6 +632,34 @@ const Courses: React.FC = () => {
                       min="1"
                       max="999"
                       required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Đợt mở lớp (Opening Batch){" "}
+                      <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={openingBatch}
+                      onChange={(e) => setOpeningBatch(e.target.value)}
+                      placeholder="Ví dụ: AB"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Lịch học (Week Pattern)
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={weekPattern}
+                      onChange={(e) => setWeekPattern(e.target.value)}
+                      placeholder="Ví dụ: 1-15,25-32"
                     />
                   </div>
 
@@ -568,12 +703,43 @@ const Courses: React.FC = () => {
         {/* View Students Modal */}
         {isStudentModalOpen && (
           <div className="modal-overlay">
-            <div className="modal-content" style={{ maxWidth: "600px" }}>
-              <div className="modal-header">
-                <h3 className="modal-title">Sinh viên trong lớp: {selectedCourseName}</h3>
-                <button className="modal-close" onClick={() => setIsStudentModalOpen(false)}>
-                  <X size={20} />
-                </button>
+            <div className="modal-content" style={{ maxWidth: "800px" }}>
+              <div className="modal-header" style={{ display: "flex", flexDirection: "column", gap: "15px", alignItems: "flex-start" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+                  <h3 className="modal-title">Sinh viên trong lớp: {selectedCourseName}</h3>
+                  <button className="modal-close" onClick={() => setIsStudentModalOpen(false)}>
+                    <X size={20} />
+                  </button>
+                </div>
+                
+                {/* Search Bar for Students in Course */}
+                <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Tìm kiếm theo mã sinh viên..."
+                    value={searchStudentCode}
+                    onChange={(e) => setSearchStudentCode(e.target.value)}
+                    style={{ flex: 1 }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && selectedId) fetchCourseStudents(selectedId, searchStudentCode);
+                    }}
+                  />
+                  <button className="btn btn-primary" onClick={() => selectedId && fetchCourseStudents(selectedId, searchStudentCode)}>
+                    Tìm kiếm
+                  </button>
+                  {searchStudentCode && (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setSearchStudentCode("");
+                        if (selectedId) fetchCourseStudents(selectedId, "");
+                      }}
+                    >
+                      Hủy tìm
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="modal-body" style={{ maxHeight: "400px", overflowY: "auto" }}>
                 {studentsLoading ? (
@@ -593,6 +759,7 @@ const Courses: React.FC = () => {
                         <th>Email</th>
                         <th>Khoa/Ngành</th>
                         <th style={{ textAlign: "center" }}>Trạng thái</th>
+                        <th style={{ textAlign: "center", width: "100px" }}>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -632,6 +799,15 @@ const Courses: React.FC = () => {
                                     : "Tốt nghiệp"}
                             </span>
                           </td>
+                          <td style={{ textAlign: "center" }}>
+                            <button
+                              className="btn-icon-only delete"
+                              title="Hủy đăng ký (Xóa khỏi lớp)"
+                              onClick={() => handleAdminUnenroll(student.id)}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -646,7 +822,6 @@ const Courses: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
     </AdminLayout>
   );
 };

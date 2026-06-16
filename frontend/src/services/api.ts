@@ -109,17 +109,38 @@ export const courseApi = {
     }),
   getStudentsByCourseAdmin: (courseId: number) =>
     api.get(`/api/admin/courses/${courseId}/students`),
+  searchAdminCourses: (courseCode: string) =>
+    api.get("/api/admin/courses/search", { params: { courseCode } }),
+  searchAdminCourseStudents: (courseId: number, studentCode: string) =>
+    api.get(`/api/admin/courses/${courseId}/students/search`, { params: { studentCode } }),
   getStudentsByCourseTeacher: (courseId: number) =>
     api.get(`/api/teacher/courses/${courseId}/students`),
 };
 
 export const enrollmentApi = {
-  getMyEnrollments: () => api.get("/api/enrollments"),
+  getMyEnrollments: () => api.get("/api/student/enrollments"),
   enroll: (data: { studentId: number; courseId: number }) =>
-    api.post("/api/enrollments", data),
+    api.post("/api/student/enrollments", data),
   enrollMultiple: (
     enrollments: Array<{ studentId: number; courseId: number }>,
-  ) => Promise.all(enrollments.map((e) => api.post("/api/enrollments", e))),
+  ) => Promise.all(enrollments.map((e) => api.post("/api/student/enrollments", e))),
+  unenroll: (courseId: number) => api.delete(`/api/student/enrollments/${courseId}`),
+};
+
+export const adminEnrollmentApi = {
+  enroll: (data: { studentId: number; courseId: number }) =>
+    api.post("/api/admin/enrollments", data),
+  unenroll: (data: { studentId: number; courseId: number }) =>
+    api.delete("/api/admin/enrollments", { data }),
+};
+
+export const teacherGradeApi = {
+  getGrades: (courseId: number) => api.get(`/api/teacher/courses/${courseId}/grades`),
+  updateGrades: (courseId: number, data: Array<{ enrollmentId: number; midtermScore: number | null; finalScore: number | null }>) =>
+    api.put(`/api/teacher/courses/${courseId}/grades`, data),
+  getSubmissions: (courseId: number) => api.get(`/api/teacher/courses/${courseId}/grades/submissions`),
+  submitMidterm: (courseId: number) => api.post(`/api/teacher/courses/${courseId}/grades/submissions/midterm/submit`),
+  submitFinal: (courseId: number) => api.post(`/api/teacher/courses/${courseId}/grades/submissions/final/submit`),
 };
 
 export default api;

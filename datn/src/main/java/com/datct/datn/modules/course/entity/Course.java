@@ -45,4 +45,13 @@ public class Course {
 
     @Enumerated(EnumType.STRING)
     private CourseStatus status = CourseStatus.PLANNED;
+
+    @Column(name = "week_pattern")
+    private String weekPattern;
+
+    @Column(name = "opening_batch", nullable = false)
+    private String openingBatch;
+
+    @OneToOne(mappedBy = "course", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private com.datct.datn.modules.grade.entity.GradeComponent gradeComponent;
 }

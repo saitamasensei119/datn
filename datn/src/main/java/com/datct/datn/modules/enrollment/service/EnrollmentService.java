@@ -3,6 +3,7 @@ package com.datct.datn.modules.enrollment.service;
 import com.datct.datn.auth.CustomUserDetails;
 import com.datct.datn.modules.course.DTO.StudentCourseResponse;
 import com.datct.datn.modules.course.entity.Course;
+import com.datct.datn.modules.course.entity.CourseStatus;
 import com.datct.datn.modules.course.repository.CourseRepository;
 import com.datct.datn.modules.enrollment.DTO.EnrollmentRequest;
 import com.datct.datn.modules.enrollment.entity.Enrollment;
@@ -159,5 +160,44 @@ public class EnrollmentService {
                         )
                 )
                 .toList();
+    }
+
+    @Transactional
+    public void unenroll(Long courseId) {
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        CustomUserDetails userDetails =
+                (CustomUserDetails)
+                        authentication.getPrincipal();
+
+        Long userId = userDetails.getUser().getId();
+        Student student =
+                studentRepository.findByUserId(userId)
+                        .orElseThrow(
+                                () -> new RuntimeException(
+                                        "Student not found"
+                                )
+                        );
+
+        Enrollment enrollment = enrollmentRepository.findByStudentIdAndCourseId(student.getId(), courseId)
+                .orElseThrow(() -> new RuntimeException("Enrollment not found"));
+
+            if (enrollment.getCourse().getStatus() != CourseStatus.OPEN) {
+                    throw new RuntimeException("Chỉ có thể hủy lớp khi lớp học phần đang ở trạng thái OPEN (Mở đăng ký)");
+        }
+
+        enrollmentRepository.delete(enrollment);
+    }
+
+    @Transactional
+    public void unenrollByAdmin(Long studentId, Long courseId) {
+        Enrollment enrollment = enrollmentRepository.findByStudentIdAndCourseId(studentId, courseId)
+                .orElseThrow(() -> new RuntimeException("Enrollment not found"));
+
+        // No status check for admin
+        enrollmentRepository.delete(enrollment);
     }
 }

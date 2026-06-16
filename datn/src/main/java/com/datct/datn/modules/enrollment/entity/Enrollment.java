@@ -38,4 +38,7 @@ public class Enrollment {
     private Course course;
 
     private LocalDateTime enrolledAt;
+
+    @OneToOne(mappedBy = "enrollment", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private com.datct.datn.modules.grade.entity.Grade grade;
 }
