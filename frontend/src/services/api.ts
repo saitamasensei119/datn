@@ -141,6 +141,16 @@ export const teacherGradeApi = {
   getSubmissions: (courseId: number) => api.get(`/api/teacher/courses/${courseId}/grades/submissions`),
   submitMidterm: (courseId: number) => api.post(`/api/teacher/courses/${courseId}/grades/submissions/midterm/submit`),
   submitFinal: (courseId: number) => api.post(`/api/teacher/courses/${courseId}/grades/submissions/final/submit`),
+  downloadTemplate: (courseId: number) => api.get(`/api/teacher/courses/${courseId}/grades/template`, { responseType: 'blob' }),
+  uploadExcel: (courseId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post(`/api/teacher/courses/${courseId}/grades/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  }
 };
 
 export const adminGradeApi = {
@@ -151,6 +161,7 @@ export const adminGradeApi = {
 
 export const studentGradeApi = {
   getMyGrades: () => api.get(`/api/student/grades`),
+  getTranscript: () => api.get(`/api/student/grades/transcript`),
 };
 
 export default api;

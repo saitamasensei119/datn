@@ -5,8 +5,11 @@ import com.datct.datn.modules.grade.DTO.StudentGradeResponse;
 import com.datct.datn.modules.grade.DTO.UpdateGradeRequest;
 import com.datct.datn.modules.grade.service.GradeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -54,5 +57,25 @@ public class TeacherGradeController {
     ) {
         gradeService.submitFinalGrades(courseId);
         return ResponseEntity.ok("Đã chốt điểm cuối kỳ thành công");
+    }
+
+    @GetMapping("/template")
+    public ResponseEntity<byte[]> downloadTemplate(@PathVariable Long courseId) {
+        byte[] excelContent = gradeService.generateGradeTemplate(courseId);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment", "grades_template_course_" + courseId + ".xlsx");
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(excelContent);
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<String> uploadGrades(
+            @PathVariable Long courseId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        gradeService.importGradesFromExcel(courseId, file);
+        return ResponseEntity.ok("Nhập điểm từ file Excel thành công");
     }
 }

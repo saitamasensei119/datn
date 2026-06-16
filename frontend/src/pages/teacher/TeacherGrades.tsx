@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import TeacherLayout from "../../components/TeacherLayout";
 import { teacherGradeApi, courseApi } from "../../services/api";
-import { ClipboardList, Save, Lock, CheckCircle } from "lucide-react";
+import { ClipboardList, Save, Lock, CheckCircle, Download, Upload } from "lucide-react";
 import "./TeacherGrades.css";
 
 interface Course {
@@ -37,6 +37,7 @@ const TeacherGrades: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [searchCourseCode, setSearchCourseCode] = useState("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -200,6 +201,44 @@ const TeacherGrades: React.FC = () => {
     }
   };
 
+  const handleExportTemplate = async () => {
+    if (!selectedCourseId) return;
+    try {
+      const response = await teacherGradeApi.downloadTemplate(Number(selectedCourseId));
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Grades_Template_${selectedCourseCode}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error(error);
+      alert("Không thể tải file mẫu.");
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedCourseId) return;
+
+    setSaving(true);
+    try {
+      await teacherGradeApi.uploadExcel(Number(selectedCourseId), file);
+      alert("Nhập điểm từ file Excel thành công!");
+      fetchGradesData(Number(selectedCourseId));
+      setHasUnsavedChanges(false);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || "Lỗi khi nhập điểm từ file Excel.");
+    } finally {
+      setSaving(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   return (
     <TeacherLayout>
       <div className="page-container">
@@ -338,33 +377,62 @@ const TeacherGrades: React.FC = () => {
                   </table>
                 </div>
 
-                <div className="action-buttons" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--card-border)' }}>
-                  <button 
-                    onClick={handleSave} 
-                    className="btn btn-secondary"
-                    disabled={saving || (isMidtermLocked && isFinalLocked)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    <Save size={18} /> Lưu Nháp
-                  </button>
+                <div className="action-buttons" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--card-border)' }}>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button 
+                      onClick={handleExportTemplate} 
+                      className="btn btn-secondary"
+                      disabled={saving}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <Download size={18} /> Tải File Mẫu
+                    </button>
+                    
+                    <input 
+                      type="file" 
+                      accept=".xlsx, .xls" 
+                      style={{ display: 'none' }} 
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                    />
+                    <button 
+                      onClick={() => fileInputRef.current?.click()} 
+                      className="btn btn-secondary"
+                      disabled={saving || (isMidtermLocked && isFinalLocked)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <Upload size={18} /> Nhập Từ Excel
+                    </button>
+                  </div>
 
-                  <button 
-                    onClick={() => handleSubmit("MIDTERM")} 
-                    className="btn btn-primary"
-                    disabled={saving || isMidtermLocked}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: isMidtermLocked ? 'var(--text-secondary)' : '#f57c00' }}
-                  >
-                    <CheckCircle size={18} /> Chốt Giữa Kỳ
-                  </button>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button 
+                      onClick={handleSave} 
+                      className="btn btn-secondary"
+                      disabled={saving || (isMidtermLocked && isFinalLocked)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <Save size={18} /> Lưu Nháp
+                    </button>
 
-                  <button 
-                    onClick={() => handleSubmit("FINAL")} 
-                    className="btn btn-primary"
-                    disabled={saving || isFinalLocked}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: isFinalLocked ? 'var(--text-secondary)' : 'var(--danger)' }}
-                  >
-                    <CheckCircle size={18} /> Chốt Cuối Kỳ
-                  </button>
+                    <button 
+                      onClick={() => handleSubmit("MIDTERM")} 
+                      className="btn btn-primary"
+                      disabled={saving || isMidtermLocked}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: isMidtermLocked ? 'var(--text-secondary)' : '#f57c00' }}
+                    >
+                      <CheckCircle size={18} /> Chốt Giữa Kỳ
+                    </button>
+
+                    <button 
+                      onClick={() => handleSubmit("FINAL")} 
+                      className="btn btn-primary"
+                      disabled={saving || isFinalLocked}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: isFinalLocked ? 'var(--text-secondary)' : 'var(--danger)' }}
+                    >
+                      <CheckCircle size={18} /> Chốt Cuối Kỳ
+                    </button>
+                  </div>
                 </div>
               </>
             )}

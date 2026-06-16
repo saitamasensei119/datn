@@ -10,6 +10,10 @@ import com.datct.datn.modules.enrollment.entity.Enrollment;
 import com.datct.datn.modules.enrollment.repository.EnrollmentRepository;
 import com.datct.datn.modules.lecturer.entity.Lecturer;
 import com.datct.datn.modules.student.entity.Student;
+import com.datct.datn.modules.subject.entity.SubjectCondition;
+import com.datct.datn.modules.subject.repository.SubjectConditionRepository;
+import com.datct.datn.modules.grade.entity.StudentSubjectResult;
+import com.datct.datn.modules.grade.repository.StudentSubjectResultRepository;
 import com.datct.datn.modules.student.repository.StudentRepository;
 import com.datct.datn.security.SecurityUtil;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +32,8 @@ public class EnrollmentService {
     private final EnrollmentRepository enrollmentRepository;
     private final StudentRepository studentRepository;
     private final CourseRepository courseRepository;
+    private final SubjectConditionRepository subjectConditionRepository;
+    private final StudentSubjectResultRepository studentSubjectResultRepository;
 
     @Transactional
     public void enroll(EnrollmentRequest request) {
@@ -55,6 +61,8 @@ public class EnrollmentService {
                 courseRepository.findById(
                         request.getCourseId()
                 ).orElseThrow(() -> new RuntimeException("Course not found"));
+
+        validateSubjectConditions(student, course);
 
         long currentStudents =
                 enrollmentRepository.countByCourseId(
@@ -100,6 +108,8 @@ public class EnrollmentService {
                         request.getCourseId()
                 ).orElseThrow(() -> new RuntimeException("Course not found"));
 
+        validateSubjectConditions(student, course);
+
         // check already enrolled
         boolean exists =
                 enrollmentRepository
@@ -131,6 +141,44 @@ public class EnrollmentService {
 
         enrollmentRepository.save(enrollment);
     }
+
+    private void validateSubjectConditions(Student student, Course course) {
+        List<SubjectCondition> conditions = subjectConditionRepository.findBySubjectId(course.getSubject().getId());
+        for (SubjectCondition condition : conditions) {
+            StudentSubjectResult result = studentSubjectResultRepository
+                    .findByStudentIdAndSubjectId(student.getId(), condition.getRequiredSubject().getId())
+                    .orElse(null);
+
+            switch (condition.getConditionType()) {
+                case "PREREQUISITE":
+                    if (result == null || !Boolean.TRUE.equals(result.getIsPassed())) {
+                        throw new RuntimeException("Bạn chưa đạt môn tiên quyết: " + condition.getRequiredSubject().getName());
+                    }
+                    break;
+                case "PRE_STUDY":
+                    if (result == null) {
+                        throw new RuntimeException("Bạn chưa học môn trước: " + condition.getRequiredSubject().getName());
+                    }
+                    break;
+                case "COREQUISITE":
+                    if (result == null) {
+                        boolean isEnrolled = enrollmentRepository.findByStudentId(student.getId()).stream()
+                                .anyMatch(e -> e.getCourse().getSubject().getId().equals(condition.getRequiredSubject().getId())
+                                        && e.getCourse().getSemester().getId().equals(course.getSemester().getId()));
+                        if (!isEnrolled) {
+                            throw new RuntimeException("Bạn phải học song hành hoặc đã học môn: " + condition.getRequiredSubject().getName());
+                        }
+                    }
+                    break;
+                case "EQUIVALENT":
+                    if (result != null && Boolean.TRUE.equals(result.getIsPassed())) {
+                        throw new RuntimeException("Bạn đã qua môn tương đương: " + condition.getRequiredSubject().getName() + ", không được đăng ký môn này.");
+                    }
+                    break;
+            }
+        }
+    }
+
     public List<StudentCourseResponse> getStudentEnroll() {
 
         Long userId = SecurityUtil.getCurrentUserId();
