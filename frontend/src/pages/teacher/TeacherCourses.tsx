@@ -15,6 +15,7 @@ const TeacherCourses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Student Modal State
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
@@ -183,6 +184,8 @@ const TeacherCourses: React.FC = () => {
               type="text"
               placeholder="Tìm kiếm lớp..."
               className="search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
@@ -194,7 +197,12 @@ const TeacherCourses: React.FC = () => {
           </div>
         ) : (
           <div className="courses-grid">
-            {courses.map((course) => (
+            {courses
+              .filter(course => 
+                course.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                course.code.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map((course) => (
               <div key={course.id} className="course-card">
                 <div className="course-header">
                   <h3>{course.name}</h3>

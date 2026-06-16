@@ -5,8 +5,8 @@ import { BookOpen, Users, Clock, TrendingUp } from "lucide-react";
 
 interface Course {
   id: number;
-  name: string;
-  code: string;
+  subjectName: string;
+  courseCode: string;
   studentCount?: number;
 }
 
@@ -124,8 +124,8 @@ const TeacherDashboard: React.FC = () => {
                 <tbody>
                   {courses.map((course) => (
                     <tr key={course.id}>
-                      <td>{course.code}</td>
-                      <td>{course.name}</td>
+                      <td>{course.courseCode}</td>
+                      <td>{course.subjectName}</td>
                       <td>{course.studentCount || 0}</td>
                       <td>
                         <a

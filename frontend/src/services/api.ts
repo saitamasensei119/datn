@@ -143,4 +143,14 @@ export const teacherGradeApi = {
   submitFinal: (courseId: number) => api.post(`/api/teacher/courses/${courseId}/grades/submissions/final/submit`),
 };
 
+export const adminGradeApi = {
+  getSubmissions: (courseId: number) => api.get(`/api/admin/courses/${courseId}/submissions`),
+  unlockMidterm: (courseId: number) => api.post(`/api/admin/courses/${courseId}/submissions/midterm/unlock`),
+  unlockFinal: (courseId: number) => api.post(`/api/admin/courses/${courseId}/submissions/final/unlock`),
+};
+
+export const studentGradeApi = {
+  getMyGrades: () => api.get(`/api/student/grades`),
+};
+
 export default api;

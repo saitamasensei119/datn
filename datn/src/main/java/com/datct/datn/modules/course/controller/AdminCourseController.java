@@ -5,6 +5,7 @@ import com.datct.datn.modules.course.DTO.CreateCourseRequest;
 import com.datct.datn.modules.course.DTO.UpdateCourseRequest;
 import com.datct.datn.modules.course.service.CourseService;
 import com.datct.datn.modules.grade.service.GradeService;
+import com.datct.datn.modules.grade.DTO.GradeSubmissionResponse;
 import com.datct.datn.modules.student.DTO.StudentResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -78,6 +79,13 @@ public class AdminCourseController {
     ) {
 
         courseService.delete(id);
+    }
+
+    @GetMapping("/{courseId}/submissions")
+    public List<GradeSubmissionResponse> getSubmissions(
+            @PathVariable Long courseId
+    ) {
+        return gradeService.getSubmissionsForCourse(courseId);
     }
 
     @PostMapping("/{courseId}/submissions/midterm/unlock")

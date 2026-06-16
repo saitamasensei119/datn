@@ -5,6 +5,7 @@ import {
   lecturerApi,
   semesterApi,
   adminEnrollmentApi,
+  adminGradeApi,
 } from "../../services/api";
 import {
   Plus,
@@ -14,6 +15,7 @@ import {
   AlertTriangle,
   BookOpen,
   CheckCircle,
+  Unlock,
 } from "lucide-react";
 import AdminLayout from "../../components/AdminLayout";
 
@@ -98,6 +100,11 @@ const Courses: React.FC = () => {
   const [selectedCourseName, setSelectedCourseName] = useState("");
   const [searchStudentCode, setSearchStudentCode] = useState("");
 
+  // Unlock Modal State
+  const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
+  const [unlockSubmissions, setUnlockSubmissions] = useState<any[]>([]);
+  const [unlockLoading, setUnlockLoading] = useState(false);
+
   const fetchCourseStudents = async (courseId: number, studentCodeSearch?: string) => {
     setStudentsLoading(true);
     try {
@@ -134,6 +141,46 @@ const Courses: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       alert(err.response?.data?.message || "Không thể xóa sinh viên.");
+    }
+  };
+
+  const fetchSubmissions = async (courseId: number) => {
+    setUnlockLoading(true);
+    try {
+      const response = await adminGradeApi.getSubmissions(courseId);
+      setUnlockSubmissions(response.data);
+    } catch (err) {
+      console.error(err);
+      alert("Không thể tải trạng thái chốt điểm.");
+    } finally {
+      setUnlockLoading(false);
+    }
+  };
+
+  const openUnlockModal = async (course: Course) => {
+    setSelectedCourseName(course.courseCode + " - " + course.subjectName);
+    setSelectedId(course.id);
+    setIsUnlockModalOpen(true);
+    setUnlockSubmissions([]);
+    await fetchSubmissions(course.id);
+  };
+
+  const handleUnlock = async (type: "midterm" | "final") => {
+    if (!selectedId) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn mở khóa điểm ${type === "midterm" ? "giữa kỳ" : "cuối kỳ"} không?`)) return;
+    
+    try {
+      if (type === "midterm") {
+        await adminGradeApi.unlockMidterm(selectedId);
+      } else {
+        await adminGradeApi.unlockFinal(selectedId);
+      }
+      setSuccess(`Đã mở khóa điểm ${type === "midterm" ? "giữa kỳ" : "cuối kỳ"}.`);
+      setTimeout(() => setSuccess(""), 3000);
+      await fetchSubmissions(selectedId);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data || "Không thể mở khóa điểm.");
     }
   };
 
@@ -479,6 +526,14 @@ const Courses: React.FC = () => {
                         <Edit2 size={16} />
                       </button>
                       <button
+                        className="btn-icon-only"
+                        onClick={() => openUnlockModal(course)}
+                        title="Mở khóa điểm"
+                        style={{ marginLeft: "4px", color: "var(--warning)" }}
+                      >
+                        <Unlock size={16} />
+                      </button>
+                      <button
                         className="btn-icon-only delete"
                         onClick={() => handleDelete(course.id)}
                         title="Xóa"
@@ -818,6 +873,68 @@ const Courses: React.FC = () => {
                 <button className="btn btn-secondary" onClick={() => setIsStudentModalOpen(false)}>
                   Đóng
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Unlock Grades Modal */}
+        {isUnlockModalOpen && (
+          <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: "500px" }}>
+              <div className="modal-header">
+                <h3 className="modal-title">Trạng Thái Điểm: {selectedCourseName}</h3>
+                <button className="modal-close" onClick={() => setIsUnlockModalOpen(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="modal-body">
+                {unlockLoading ? (
+                  <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}>
+                    <div className="spinner"></div>
+                  </div>
+                ) : unlockSubmissions.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-secondary)" }}>
+                    Chưa có thông tin điểm.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    {(() => {
+                      const midtermSub = unlockSubmissions.find((s: any) => s.gradeType === "MIDTERM");
+                      const finalSub = unlockSubmissions.find((s: any) => s.gradeType === "FINAL");
+                      return (
+                        <>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", backgroundColor: "var(--bg-light)", borderRadius: "8px", border: "1px solid var(--card-border)" }}>
+                            <div>
+                              <strong>Điểm Giữa Kỳ:</strong>{" "}
+                              <span style={{ color: midtermSub?.status === "SUBMITTED" ? "var(--danger)" : "var(--success)" }}>
+                                {midtermSub?.status === "SUBMITTED" ? "Đã chốt" : "Chưa chốt"}
+                              </span>
+                            </div>
+                            {midtermSub?.status === "SUBMITTED" && (
+                              <button className="btn btn-sm btn-primary" onClick={() => handleUnlock("midterm")}>
+                                Mở khóa
+                              </button>
+                            )}
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", backgroundColor: "var(--bg-light)", borderRadius: "8px", border: "1px solid var(--card-border)" }}>
+                            <div>
+                              <strong>Điểm Cuối Kỳ:</strong>{" "}
+                              <span style={{ color: finalSub?.status === "SUBMITTED" ? "var(--danger)" : "var(--success)" }}>
+                                {finalSub?.status === "SUBMITTED" ? "Đã chốt" : "Chưa chốt"}
+                              </span>
+                            </div>
+                            {finalSub?.status === "SUBMITTED" && (
+                              <button className="btn btn-sm btn-primary" onClick={() => handleUnlock("final")}>
+                                Mở khóa
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
             </div>
           </div>

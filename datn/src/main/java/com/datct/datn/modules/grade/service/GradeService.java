@@ -14,6 +14,9 @@ import com.datct.datn.modules.grade.entity.GradeSubmission;
 import com.datct.datn.modules.grade.repository.GradeSubmissionRepository;
 import com.datct.datn.modules.lecturer.entity.Lecturer;
 import com.datct.datn.modules.lecturer.repository.LecturerRepository;
+import com.datct.datn.modules.student.entity.Student;
+import com.datct.datn.modules.student.repository.StudentRepository;
+import com.datct.datn.modules.grade.DTO.StudentGradeViewResponse;
 import com.datct.datn.auth.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -34,6 +37,7 @@ public class GradeService {
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final LecturerRepository lecturerRepository;
+    private final StudentRepository studentRepository;
 
     private Lecturer getCurrentLecturer() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -69,6 +73,46 @@ public class GradeService {
                     .totalScore(grade != null ? grade.getTotalScore() : null)
                     .build();
         }).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentGradeViewResponse> getGradesForCurrentStudent() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long userId = userDetails.getUser().getId();
+        Student student = studentRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        List<Enrollment> enrollments = enrollmentRepository.findByStudentId(student.getId());
+
+        return enrollments.stream().map(enrollment -> {
+            Grade grade = gradeRepository.findByEnrollmentId(enrollment.getId()).orElse(null);
+            
+            GradeSubmission midtermSub = gradeSubmissionRepository.findByCourseIdAndGradeType(enrollment.getCourse().getId(), "MIDTERM").orElse(null);
+            GradeSubmission finalSub = gradeSubmissionRepository.findByCourseIdAndGradeType(enrollment.getCourse().getId(), "FINAL").orElse(null);
+
+            Double midtermScore = grade != null ? grade.getMidtermScore() : null;
+            String midtermStatus = (midtermSub != null && "SUBMITTED".equals(midtermSub.getStatus())) 
+                    ? "Đã gửi ban đào tạo" : "Chưa gửi ban đào tạo";
+
+            Double finalScore = grade != null ? grade.getFinalScore() : null;
+            String finalStatus = (finalSub != null && "SUBMITTED".equals(finalSub.getStatus())) 
+                    ? "Đã gửi ban đào tạo" : "Chưa gửi ban đào tạo";
+            Double totalScore = grade != null ? grade.getTotalScore() : null;
+
+            return StudentGradeViewResponse.builder()
+                    .courseId(enrollment.getCourse().getId())
+                    .courseCode(enrollment.getCourse().getCourseCode())
+                    .subjectName(enrollment.getCourse().getSubject().getName())
+                    .credits(enrollment.getCourse().getSubject().getCredits())
+                    .midtermScore(midtermScore)
+                    .midtermStatus(midtermStatus)
+                    .finalScore(finalScore)
+                    .finalStatus(finalStatus)
+                    .totalScore(totalScore)
+                    .status(enrollment.getCourse().getStatus() != null ? enrollment.getCourse().getStatus().name() : null)
+                    .build();
+        }).collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional
