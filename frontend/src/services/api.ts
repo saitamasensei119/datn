@@ -115,6 +115,7 @@ export const courseApi = {
     api.get("/api/student/courses/search", {
       params: { page, size, courseCode, subjectCode, subjectName },
     }),
+  getStudentCourseById: (id: number) => api.get(`/api/student/courses/${id}`),
   getStudentsByCourseAdmin: (courseId: number) =>
     api.get(`/api/admin/courses/${courseId}/students`),
   searchAdminCourses: (courseCode: string) =>
@@ -188,6 +189,20 @@ export const studentAttendanceApi = {
 
 export const studentDashboardApi = {
   getStats: () => api.get("/api/student/dashboard/summary"),
+};
+
+export const roomApi = {
+  getAll: () => api.get("/api/admin/rooms"),
+  create: (data: any) => api.post("/api/admin/rooms", data),
+  update: (id: number, data: any) => api.put(`/api/admin/rooms/${id}`, data),
+  delete: (id: number) => api.delete(`/api/admin/rooms/${id}`),
+};
+
+export const timeslotApi = {
+  getAll: () => api.get("/api/admin/timeslots"),
+  create: (data: any) => api.post("/api/admin/timeslots", data),
+  update: (id: number, data: any) => api.put(`/api/admin/timeslots/${id}`, data),
+  delete: (id: number) => api.delete(`/api/admin/timeslots/${id}`),
 };
 
 export default api;

@@ -12,6 +12,7 @@ import {
   Sun,
   Moon,
   LayoutDashboard,
+  Building,
 } from "lucide-react";
 
 interface SidebarLinkProps {
@@ -104,6 +105,11 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               to="/admin/courses"
               icon={<BookMarked size={20} />}
               label="Khóa Học"
+            />
+            <SidebarLink
+              to="/admin/infrastructure"
+              icon={<Building size={20} />}
+              label="Hạ Tầng"
             />
             <SidebarLink
               to="/admin/semesters"

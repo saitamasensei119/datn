@@ -10,6 +10,7 @@ import Lecturers from "./pages/admin/Lecturers";
 import Semesters from "./pages/admin/Semesters";
 import Students from "./pages/admin/Students";
 import Courses from "./pages/admin/Courses";
+import Infrastructure from "./pages/admin/Infrastructure";
 
 // Teacher Components
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
@@ -21,6 +22,7 @@ import TeacherAttendance from "./pages/teacher/TeacherAttendance";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentEnroll from "./pages/student/StudentEnroll";
 import StudentMyCourses from "./pages/student/StudentMyCourses";
+import StudentCourseDetails from "./pages/student/StudentCourseDetails";
 import StudentMyGrades from "./pages/student/StudentMyGrades";
 import StudentTranscript from "./pages/student/StudentTranscript";
 import StudentAttendance from "./pages/student/StudentAttendance";
@@ -91,6 +93,14 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/infrastructure"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <Infrastructure />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Teacher Routes */}
       <Route
@@ -148,6 +158,14 @@ function App() {
         element={
           <ProtectedRoute requiredRole="STUDENT">
             <StudentMyCourses />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/my-courses/:id"
+        element={
+          <ProtectedRoute requiredRole="STUDENT">
+            <StudentCourseDetails />
           </ProtectedRoute>
         }
       />

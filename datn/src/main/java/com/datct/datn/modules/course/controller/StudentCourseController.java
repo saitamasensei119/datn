@@ -78,4 +78,9 @@ public class StudentCourseController {
 
         return courseService.getOpenCourses(pageable);
     }
+
+    @GetMapping("/{id}")
+    public CourseResponse getById(@PathVariable Long id) {
+        return courseService.getById(id);
+    }
 }
