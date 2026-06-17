@@ -15,6 +15,12 @@ import java.util.List;
 public class SubjectController {
 
     private final SubjectService subjectService;
+    private final com.datct.datn.modules.subject.service.SubjectImportService subjectImportService;
+
+    @PostMapping("/import")
+    public java.util.Map<String, Object> importExcel(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        return subjectImportService.importExcel(file);
+    }
 
     @PostMapping
     public SubjectResponse create(

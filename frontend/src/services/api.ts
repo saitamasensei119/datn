@@ -57,6 +57,9 @@ export const subjectApi = {
   create: (data: any) => api.post("/api/subjects", data),
   update: (id: number, data: any) => api.put(`/api/subjects/${id}`, data),
   delete: (id: number) => api.delete(`/api/subjects/${id}`),
+  import: (formData: FormData) => api.post("/api/subjects/import", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }),
 };
 
 export const subjectConditionApi = {

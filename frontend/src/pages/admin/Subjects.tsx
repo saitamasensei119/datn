@@ -63,6 +63,8 @@ const Subjects: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -234,6 +236,34 @@ const Subjects: React.FC = () => {
     }
   };
 
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    setError("");
+    setSuccess("");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await subjectApi.import(formData);
+      const data = res.data;
+      setSuccess(`Import thành công! Đã tạo ${data.created} môn, bỏ qua ${data.skipped} môn trùng, lỗi ${data.errors} dòng.`);
+      setTimeout(() => setSuccess(""), 5000);
+      fetchData();
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || "Lỗi khi import file Excel.");
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -316,10 +346,34 @@ const Subjects: React.FC = () => {
               Quản lý chương trình học, môn học và số tín chỉ tương ứng
             </p>
           </div>
-          <button className="btn btn-primary" onClick={openCreateModal}>
-            <Plus size={18} />
-            <span>Thêm môn học</span>
-          </button>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              style={{ display: "none" }}
+              ref={fileInputRef}
+              onChange={handleImportExcel}
+            />
+            <button
+              className="btn btn-secondary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+              style={{ display: "flex", alignItems: "center", gap: "8px" }}
+            >
+              {isImporting ? (
+                <>
+                  <div className="spinner" style={{ width: "16px", height: "16px", borderWidth: "2px" }}></div>
+                  Đang xử lý...
+                </>
+              ) : (
+                "Import Excel"
+              )}
+            </button>
+            <button className="btn btn-primary" onClick={openCreateModal}>
+              <Plus size={18} />
+              <span>Thêm môn học</span>
+            </button>
+          </div>
         </div>
 
         {success && (
