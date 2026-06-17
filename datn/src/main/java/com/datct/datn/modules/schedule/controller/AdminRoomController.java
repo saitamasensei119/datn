@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+import org.springframework.data.domain.Page;
 @RestController
 @RequestMapping("/api/admin/rooms")
 @RequiredArgsConstructor
@@ -17,6 +17,13 @@ public class AdminRoomController {
     @GetMapping
     public List<RoomResponse> getAllRooms() {
         return roomService.getAllRooms();
+    }
+
+    @GetMapping("/page")
+    public Page<RoomResponse> getRooms(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return roomService.getRooms(page, size);
     }
 
     @PostMapping

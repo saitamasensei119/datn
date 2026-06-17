@@ -46,8 +46,11 @@ public class Course {
     @Enumerated(EnumType.STRING)
     private CourseStatus status = CourseStatus.PLANNED;
 
-    @Column(name = "week_pattern")
-    private String weekPattern;
+    @Column(name = "attached_course_code")
+    private String attachedCourseCode;
+
+    @Column(columnDefinition = "TEXT")
+    private String note;
 
     @Column(name = "opening_batch", nullable = false)
     private String openingBatch;

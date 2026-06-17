@@ -45,6 +45,9 @@ public class Subject {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    @Column(name = "management_code", nullable = false)
+    private String managementCode;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     private Department department;

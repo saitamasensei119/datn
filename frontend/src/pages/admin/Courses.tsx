@@ -44,8 +44,9 @@ interface Course {
   subjectId?: number;
   lecturerId?: number;
   semesterId?: number;
+  attachedCourseCode?: string;
+  note?: string;
   status?: string;
-  weekPattern?: string;
   openingBatch?: string;
   midtermWeight?: number;
 }
@@ -74,6 +75,7 @@ const Courses: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -87,7 +89,8 @@ const Courses: React.FC = () => {
   const [lecturerId, setLecturerId] = useState<string>("");
   const [semesterId, setSemesterId] = useState<string>("");
   const [status, setStatus] = useState<string>("PLANNED");
-  const [weekPattern, setWeekPattern] = useState("");
+  const [attachedCourseCode, setAttachedCourseCode] = useState("");
+  const [note, setNote] = useState("");
   const [openingBatch, setOpeningBatch] = useState("");
   const [midtermWeight, setMidtermWeight] = useState<number>(0.3);
 
@@ -184,6 +187,33 @@ const Courses: React.FC = () => {
     }
   };
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const res = await courseApi.importExcel(file);
+      const data = res.data;
+      setSuccess(`Import thành công! Đã tạo ${data.coursesCreated} lớp, ${data.schedulesCreated} lịch học. Lỗi: ${data.errors} dòng.`);
+      setTimeout(() => setSuccess(""), 5000);
+      fetchData(searchCourseCode);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || "Lỗi khi import file Excel.");
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const fetchData = async (courseCodeSearch?: string) => {
     setLoading(true);
     try {
@@ -206,7 +236,8 @@ const Courses: React.FC = () => {
         subjectId: course.subjectId,
         lecturerId: course.lecturerId,
         semesterId: course.semesterId,
-        weekPattern: course.weekPattern || "",
+        attachedCourseCode: course.attachedCourseCode || "",
+        note: course.note || "",
         openingBatch: course.openingBatch || "",
         midtermWeight: course.midtermWeight,
       }));
@@ -253,7 +284,8 @@ const Courses: React.FC = () => {
     setLecturerId(lecturers[0]?.id.toString() || "");
     setSemesterId(semesters[0]?.id.toString() || "");
     setStatus("PLANNED");
-    setWeekPattern("");
+    setAttachedCourseCode("");
+    setNote("");
     setOpeningBatch("");
     setMidtermWeight(0.3);
     setSelectedId(null);
@@ -269,7 +301,8 @@ const Courses: React.FC = () => {
     setLecturerId(course.lecturerId?.toString() || "");
     setSemesterId(course.semesterId?.toString() || "");
     setStatus(course.status || "PLANNED");
-    setWeekPattern(course.weekPattern || "");
+    setAttachedCourseCode(course.attachedCourseCode || "");
+    setNote(course.note || "");
     setOpeningBatch(course.openingBatch || "");
     setMidtermWeight(course.midtermWeight ?? 0.3);
     setSelectedId(course.id);
@@ -292,7 +325,9 @@ const Courses: React.FC = () => {
       !lecturerId ||
       !semesterId ||
       maxStudents < 1 ||
-      !openingBatch.trim()
+      !openingBatch.trim() ||
+      !attachedCourseCode.trim() ||
+      !note.trim()
     ) {
       setError(
         "Vui lòng điền đầy đủ các thông tin bắt buộc và số học sinh > 0.",
@@ -307,7 +342,8 @@ const Courses: React.FC = () => {
       semesterId: Number(semesterId),
       maxStudents: Number(maxStudents),
       status,
-      weekPattern,
+      attachedCourseCode,
+      note,
       openingBatch,
       midtermWeight: Number(midtermWeight),
     };
@@ -383,14 +419,31 @@ const Courses: React.FC = () => {
               Tạo, chỉnh sửa và xóa lớp học phần
             </p>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={openCreateModal}
-            disabled={loading}
-          >
-            <Plus size={18} />
-            <span>Tạo lớp học phần</span>
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input 
+              type="file" 
+              accept=".xlsx,.xls" 
+              style={{ display: 'none' }} 
+              ref={fileInputRef}
+              onChange={handleImportExcel}
+            />
+            <button
+              className="btn btn-secondary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading || isImporting}
+            >
+              <BookOpen size={18} />
+              <span>{isImporting ? 'Đang Import...' : 'Import Excel'}</span>
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={openCreateModal}
+              disabled={loading}
+            >
+              <Plus size={18} />
+              <span>Tạo lớp học phần</span>
+            </button>
+          </div>
         </div>
 
         {/* Search Bar for Courses */}
@@ -463,7 +516,7 @@ const Courses: React.FC = () => {
                   <th>Giảng Viên</th>
                   <th>Học Kỳ</th>
                   <th style={{ width: "80px", textAlign: "center" }}>Đợt mở</th>
-                  <th>Lịch học</th>
+                  <th>Mã lớp kèm</th>
                   <th style={{ width: "80px", textAlign: "center" }}>Sĩ Số</th>
                   <th style={{ width: "100px", textAlign: "center" }}>
                     Trạng Thái
@@ -487,7 +540,7 @@ const Courses: React.FC = () => {
                         {course.openingBatch || "Chưa có"}
                       </span>
                     </td>
-                    <td style={{ fontSize: "0.9rem" }}>{course.weekPattern || "Chưa có"}</td>
+                    <td style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>{course.attachedCourseCode || "Không"}</td>
                     <td style={{ textAlign: "center" }}>
                       {course.maxStudents}
                     </td>
@@ -707,14 +760,29 @@ const Courses: React.FC = () => {
 
                   <div className="form-group">
                     <label className="form-label">
-                      Lịch học (Week Pattern)
+                      Mã lớp kèm <span style={{ color: "var(--danger)" }}>*</span>
                     </label>
                     <input
                       type="text"
                       className="form-control"
-                      value={weekPattern}
-                      onChange={(e) => setWeekPattern(e.target.value)}
-                      placeholder="Ví dụ: 1-15,25-32"
+                      value={attachedCourseCode}
+                      onChange={(e) => setAttachedCourseCode(e.target.value)}
+                      placeholder="Ví dụ: 123456"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Ghi chú <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <textarea
+                      className="form-control"
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="Nhập ghi chú (nếu có)..."
+                      required
+                      style={{ minHeight: "80px", resize: "vertical" }}
                     />
                   </div>
 

@@ -17,7 +17,9 @@ public class CreateCourseRequest {
 
     private Integer maxStudents;
 
-    private String weekPattern;
+    private String attachedCourseCode;
+
+    private String note;
 
     private String openingBatch;
 

@@ -10,6 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +23,12 @@ public class RoomService {
         return roomRepository.findAll().stream()
                 .map(RoomResponse::fromEntity)
                 .collect(Collectors.toList());
+    }
+
+    public Page<RoomResponse> getRooms(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("id").ascending());
+        return roomRepository.findAll(pageable)
+                .map(RoomResponse::fromEntity);
     }
 
     @Transactional

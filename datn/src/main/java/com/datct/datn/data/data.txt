@@ -31,10 +31,10 @@ CREATE TABLE students (
     department_id BIGINT,
 
     status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
-    // ACTIVE,        đang học
-    // SUSPENDED,     tạm ngừng học
-    // DROPPED_OUT,   thôi học
-    // GRADUATED      đã tốt nghiệp
+    --ACTIVE,        đang học
+    --SUSPENDED,     tạm ngừng học
+    --DROPPED_OUT,   thôi học
+    --GRADUATED      đã tốt nghiệp
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_students_user
@@ -58,10 +58,10 @@ CREATE TABLE lecturers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE'
-    //ACTIVE    : đang công tác
-    //ON_LEAVE  : nghỉ phép / tạm nghỉ
-    //RETIRED   : nghỉ hưu
-    //RESIGNED  : nghỉ việc
+    --ACTIVE    : đang công tác
+    --ON_LEAVE  : nghỉ phép / tạm nghỉ
+    --RETIRED   : nghỉ hưu
+    --RESIGNED  : nghỉ việc
 
     CONSTRAINT fk_lecturers_user
         FOREIGN KEY (user_id)
@@ -93,10 +93,13 @@ CREATE TABLE subjects (
 
     english_name VARCHAR(255),
     subject_type VARCHAR(30) NOT NULL,
-    // BT, ĐA, ĐATN, ĐATNKS, LT, LT+BT, TH, TN, TT, TTKS, TTKT, TTTN
+    -- BT, ĐA, ĐATN, ĐATNKS, LT, LT+BT, TH, TN, TT, TTKS, TTKT, TTTN
     lab_requirement VARCHAR(20),
     program_code VARCHAR(50),
     note TEXT,
+
+    management_code VARCHAR(30) NOT NULL,
+    -- ELITECH,CT_CHUAN,KSCSDT,SIE,VB2CQ_VLVH,VLVH
 
     credits INT NOT NULL,
     department_id BIGINT,
@@ -117,14 +120,16 @@ CREATE TABLE courses (
     course_code VARCHAR(50) UNIQUE NOT NULL,
     max_students INT NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PLANNED',
-    PLANNED,      // chuẩn bị mở
-    OPEN,         // đang cho đăng ký
-    IN_PROGRESS,  // đang học
-    COMPLETED,    // kết thúc
-    CANCELLED     // hủy
+    PLANNED,      -- chuẩn bị mở
+    OPEN,         -- đang cho đăng ký
+    IN_PROGRESS,  -- đang học
+    COMPLETED,    -- kết thúc
+    CANCELLED     -- hủy
 
-    week_pattern VARCHAR(100),
     opening_batch VARCHAR(2) NOT NULL,
+
+    attached_course_code VARCHAR(50) NOT NULL,
+    note TEXT NOT NULL,
 
     CONSTRAINT fk_courses_subject
         FOREIGN KEY (subject_id)
@@ -398,4 +403,38 @@ CREATE TABLE attendance_records (
 
     CONSTRAINT uq_attendance_record
         UNIQUE(attendance_session_id, student_id)
+);
+
+-- =========================
+-- class schedules
+-- =========================
+CREATE TABLE class_schedules (
+    id BIGSERIAL PRIMARY KEY,
+
+    course_id BIGINT NOT NULL,
+
+    session_number INT NOT NULL,
+
+    day_of_week INT NOT NULL,
+
+    start_period INT NOT NULL,
+
+    end_period INT NOT NULL,
+
+    shift VARCHAR(20), --kíp
+
+    time_string VARCHAR(50),
+
+    week_pattern VARCHAR(100),
+
+    room_id BIGINT,
+
+    CONSTRAINT fk_class_schedule_course
+        FOREIGN KEY (course_id)
+        REFERENCES courses(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_class_schedule_room
+        FOREIGN KEY (room_id)
+        REFERENCES rooms(id)
 );

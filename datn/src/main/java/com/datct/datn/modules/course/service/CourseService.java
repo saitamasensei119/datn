@@ -58,6 +58,14 @@ public class CourseService {
                     "Course code already exists"
             );
         }
+        
+        if (request.getAttachedCourseCode() == null || request.getAttachedCourseCode().trim().isEmpty()) {
+            throw new RuntimeException("Mã lớp kèm không được để trống");
+        }
+        
+        if (request.getNote() == null || request.getNote().trim().isEmpty()) {
+            throw new RuntimeException("Ghi chú không được để trống");
+        }
 
         Subject subject =
                 subjectRepository.findById(
@@ -107,7 +115,9 @@ public class CourseService {
 
         course.setLecturer(lecturer);
 
-        course.setWeekPattern(request.getWeekPattern());
+        course.setAttachedCourseCode(request.getAttachedCourseCode());
+
+        course.setNote(request.getNote());
 
         course.setOpeningBatch(request.getOpeningBatch());
 
@@ -180,6 +190,14 @@ public class CourseService {
                                         "Course not found"
                                 )
                         );
+                        
+        if (request.getAttachedCourseCode() == null || request.getAttachedCourseCode().trim().isEmpty()) {
+            throw new RuntimeException("Mã lớp kèm không được để trống");
+        }
+        
+        if (request.getNote() == null || request.getNote().trim().isEmpty()) {
+            throw new RuntimeException("Ghi chú không được để trống");
+        }
 
         Subject subject =
                 subjectRepository.findById(
@@ -229,7 +247,8 @@ public class CourseService {
         course.setStatus(
                 request.getStatus()
         );
-        course.setWeekPattern(request.getWeekPattern());
+        course.setAttachedCourseCode(request.getAttachedCourseCode());
+        course.setNote(request.getNote());
         course.setOpeningBatch(request.getOpeningBatch());
 
         if (course.getGradeComponent() != null) {
@@ -396,7 +415,8 @@ public class CourseService {
                 course.getSubject().getId(),
                 course.getLecturer() != null ? course.getLecturer().getId() : null,
                 course.getSemester().getId(),
-                course.getWeekPattern(),
+                course.getAttachedCourseCode(),
+                course.getNote(),
                 course.getOpeningBatch(),
                 course.getGradeComponent() != null ? course.getGradeComponent().getMidtermWeight() : null
         );

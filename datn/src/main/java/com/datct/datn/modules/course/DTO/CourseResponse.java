@@ -30,7 +30,9 @@ public class CourseResponse {
 
     private Long semesterId;
 
-    private String weekPattern;
+    private String attachedCourseCode;
+
+    private String note;
 
     private String openingBatch;
 

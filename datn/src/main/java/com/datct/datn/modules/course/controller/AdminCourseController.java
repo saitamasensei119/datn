@@ -19,6 +19,15 @@ public class AdminCourseController {
 
     private final CourseService courseService;
     private final GradeService gradeService;
+    private final com.datct.datn.modules.course.service.CourseImportService courseImportService;
+
+    @PostMapping("/import")
+    public ResponseEntity<java.util.Map<String, Object>> importCourses(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(value = "semesterId", required = false) Long semesterId
+    ) {
+        return ResponseEntity.ok(courseImportService.importExcel(file, semesterId));
+    }
 
     @PostMapping
     public CourseResponse create(

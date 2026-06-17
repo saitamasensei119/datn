@@ -27,6 +27,7 @@ interface Subject {
   labRequirement?: string;
   programCode?: string;
   note?: string;
+  managementCode?: string;
 }
 
 interface SubjectCondition {
@@ -86,6 +87,7 @@ const Subjects: React.FC = () => {
   const [labRequirement, setLabRequirement] = useState("");
   const [programCode, setProgramCode] = useState("");
   const [note, setNote] = useState("");
+  const [managementCode, setManagementCode] = useState("");
 
   const fetchData = async () => {
     setLoading(true);
@@ -108,6 +110,7 @@ const Subjects: React.FC = () => {
         labRequirement: subj.labRequirement || "",
         programCode: subj.programCode || "",
         note: subj.note || "",
+        managementCode: subj.managementCode || "",
       }));
 
       setSubjects(mappedSubjects);
@@ -135,6 +138,7 @@ const Subjects: React.FC = () => {
     setLabRequirement("");
     setProgramCode("");
     setNote("");
+    setManagementCode("");
     setSelectedId(null);
     setIsModalOpen(true);
   };
@@ -150,6 +154,7 @@ const Subjects: React.FC = () => {
     setLabRequirement(subj.labRequirement || "");
     setProgramCode(subj.programCode || "");
     setNote(subj.note || "");
+    setManagementCode(subj.managementCode || "");
     setSelectedId(subj.id);
     setIsModalOpen(true);
   };
@@ -248,6 +253,7 @@ const Subjects: React.FC = () => {
       labRequirement,
       programCode,
       note,
+      managementCode,
     };
 
     try {
@@ -362,6 +368,7 @@ const Subjects: React.FC = () => {
                     Số tín chỉ
                   </th>
                   <th>Mã CTĐT</th>
+                  <th>Mã QL</th>
                   <th>Thuộc Khoa/Ngành</th>
                   <th style={{ width: "120px", textAlign: "center" }}>
                     Thao tác
@@ -387,6 +394,11 @@ const Subjects: React.FC = () => {
                       </span>
                     </td>
                     <td>{subj.programCode || <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Chưa có</span>}</td>
+                    <td>
+                      {subj.managementCode === "CT_CHUAN" 
+                        ? "CT CHUẨN" 
+                        : subj.managementCode || <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Chưa có</span>}
+                    </td>
                     <td>{subj.departmentName}</td>
                     <td style={{ textAlign: "center" }}>
                       <div
@@ -552,6 +564,21 @@ const Subjects: React.FC = () => {
                       placeholder="Ví dụ: KTPM-2022"
                       value={programCode}
                       onChange={(e) => setProgramCode(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="subj-management-code">
+                      Mã quản lý (Management Code) <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <input
+                      id="subj-management-code"
+                      type="text"
+                      className="form-control"
+                      placeholder="Ví dụ: SP2023"
+                      value={managementCode}
+                      onChange={(e) => setManagementCode(e.target.value)}
+                      required
                     />
                   </div>
 

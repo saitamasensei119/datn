@@ -24,4 +24,6 @@ public class UpdateSubjectRequest {
     private String programCode;
 
     private String note;
+
+    private String managementCode;
 }

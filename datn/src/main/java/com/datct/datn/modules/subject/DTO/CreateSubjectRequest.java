@@ -24,4 +24,6 @@ public class CreateSubjectRequest {
     private String programCode;
 
     private String note;
+
+    private String managementCode;
 }

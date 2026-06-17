@@ -20,7 +20,9 @@ public class UpdateCourseRequest {
 
     private CourseStatus status;
 
-    private String weekPattern;
+    private String attachedCourseCode;
+
+    private String note;
 
     private String openingBatch;
 

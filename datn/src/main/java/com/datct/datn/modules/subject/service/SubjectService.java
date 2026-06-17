@@ -65,6 +65,7 @@ public class SubjectService {
         subject.setLabRequirement(request.getLabRequirement());
         subject.setProgramCode(request.getProgramCode());
         subject.setNote(request.getNote());
+        subject.setManagementCode(request.getManagementCode() != null ? request.getManagementCode() : "");
 
         Subject saved =
                 subjectRepository.save(subject);
@@ -133,6 +134,7 @@ public class SubjectService {
         subject.setLabRequirement(request.getLabRequirement());
         subject.setProgramCode(request.getProgramCode());
         subject.setNote(request.getNote());
+        subject.setManagementCode(request.getManagementCode() != null ? request.getManagementCode() : "");
 
         Subject updated =
                 subjectRepository.save(subject);
@@ -164,7 +166,8 @@ public class SubjectService {
                 subject.getSubjectType(),
                 subject.getLabRequirement(),
                 subject.getProgramCode(),
-                subject.getNote()
+                subject.getNote(),
+                subject.getManagementCode()
         );
     }
 }

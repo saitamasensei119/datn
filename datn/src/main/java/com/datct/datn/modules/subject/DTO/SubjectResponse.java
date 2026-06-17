@@ -30,4 +30,6 @@ public class SubjectResponse {
     private String programCode;
 
     private String note;
+
+    private String managementCode;
 }

@@ -124,6 +124,18 @@ export const courseApi = {
     api.get(`/api/admin/courses/${courseId}/students/search`, { params: { studentCode } }),
   getStudentsByCourseTeacher: (courseId: number) =>
     api.get(`/api/teacher/courses/${courseId}/students`),
+  importExcel: (file: File, semesterId?: number) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (semesterId) {
+      formData.append("semesterId", semesterId.toString());
+    }
+    return api.post(`/api/admin/courses/import`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  }
 };
 
 export const enrollmentApi = {
@@ -193,6 +205,7 @@ export const studentDashboardApi = {
 
 export const roomApi = {
   getAll: () => api.get("/api/admin/rooms"),
+  getPage: (page: number = 0, size: number = 10) => api.get("/api/admin/rooms/page", { params: { page, size } }),
   create: (data: any) => api.post("/api/admin/rooms", data),
   update: (id: number, data: any) => api.put(`/api/admin/rooms/${id}`, data),
   delete: (id: number) => api.delete(`/api/admin/rooms/${id}`),
@@ -200,9 +213,11 @@ export const roomApi = {
 
 export const timeslotApi = {
   getAll: () => api.get("/api/admin/timeslots"),
+  getPage: (page: number = 0, size: number = 10) => api.get("/api/admin/timeslots/page", { params: { page, size } }),
   create: (data: any) => api.post("/api/admin/timeslots", data),
   update: (id: number, data: any) => api.put(`/api/admin/timeslots/${id}`, data),
   delete: (id: number) => api.delete(`/api/admin/timeslots/${id}`),
+  autoGenerate: () => api.post("/api/admin/timeslots/seed"),
 };
 
 export default api;

@@ -11,4 +11,6 @@ public interface SubjectRepository
     boolean existsBySubjectCode(
             String subjectCode
     );
+
+    java.util.Optional<Subject> findBySubjectCode(String subjectCode);
 }
