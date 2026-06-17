@@ -10,6 +10,7 @@ import {
   Sun,
   Moon,
   LayoutDashboard,
+  UserCheck,
 } from "lucide-react";
 
 interface SidebarLinkProps {
@@ -69,6 +70,7 @@ const StudentLayout: React.FC<{ children: React.ReactNode }> = ({
     if (path.includes("/student/my-courses")) return "Lớp Học Phần của Tôi";
     if (path.includes("/student/my-grades")) return "Kết Quả Học Tập";
     if (path.includes("/student/transcript")) return "Bảng Điểm";
+    if (path.includes("/student/attendance")) return "Điểm Danh";
     return "Trang Chủ Sinh Viên";
   };
 
@@ -103,6 +105,11 @@ const StudentLayout: React.FC<{ children: React.ReactNode }> = ({
               to="/student/my-grades"
               icon={<CheckCircle size={20} />}
               label="Kết Quả Học Tập"
+            />
+            <SidebarLink
+              to="/student/attendance"
+              icon={<UserCheck size={20} />}
+              label="Điểm Danh"
             />
             <SidebarLink
               to="/student/transcript"

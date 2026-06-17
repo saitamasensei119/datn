@@ -349,3 +349,53 @@ CREATE TABLE student_subject_results (
     CONSTRAINT uq_result
         UNIQUE(student_id, subject_id)
 );
+
+-- =========================
+-- attendance sessions
+-- =========================
+CREATE TABLE attendance_sessions (
+    id BIGSERIAL PRIMARY KEY,
+
+    course_id BIGINT NOT NULL,
+
+    session_date DATE NOT NULL,
+
+    note TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_attendance_session_course
+        FOREIGN KEY (course_id)
+        REFERENCES courses(id)
+        ON DELETE CASCADE
+);
+-- =========================
+-- attendance records
+-- =========================
+CREATE TABLE attendance_records (
+    id BIGSERIAL PRIMARY KEY,
+
+    attendance_session_id BIGINT NOT NULL,
+
+    student_id BIGINT NOT NULL,
+
+    status VARCHAR(20) NOT NULL,
+    -- PRESENT
+    -- ABSENT
+    -- LATE
+    -- EXCUSED
+
+    note TEXT,
+
+    CONSTRAINT fk_attendance_record_session
+        FOREIGN KEY (attendance_session_id)
+        REFERENCES attendance_sessions(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_attendance_record_student
+        FOREIGN KEY (student_id)
+        REFERENCES students(id),
+
+    CONSTRAINT uq_attendance_record
+        UNIQUE(attendance_session_id, student_id)
+);

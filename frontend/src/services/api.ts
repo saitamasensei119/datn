@@ -167,9 +167,23 @@ export const adminGradeApi = {
   unlockFinal: (courseId: number) => api.post(`/api/admin/courses/${courseId}/submissions/final/unlock`),
 };
 
+export const teacherAttendanceApi = {
+  getSessions: (courseId: number) => api.get(`/api/teacher/courses/${courseId}/attendance-sessions`),
+  getOrCreateSession: (courseId: number, date: string) => 
+    api.post(`/api/teacher/courses/${courseId}/attendance-sessions?date=${date}`),
+  getRecords: (sessionId: number) => api.get(`/api/teacher/attendance-sessions/${sessionId}/records`),
+  updateRecords: (sessionId: number, records: Array<{recordId: number, status: string, note?: string}>) =>
+    api.put(`/api/teacher/attendance-sessions/${sessionId}/records`, { records })
+};
+
 export const studentGradeApi = {
   getMyGrades: () => api.get(`/api/student/grades`),
   getTranscript: () => api.get(`/api/student/grades/transcript`),
+};
+
+export const studentAttendanceApi = {
+  getSummary: () => api.get(`/api/student/attendance/summary`),
+  getDetails: (courseId: number) => api.get(`/api/student/attendance/courses/${courseId}`),
 };
 
 export const studentDashboardApi = {

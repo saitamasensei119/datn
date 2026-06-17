@@ -351,7 +351,7 @@ const TeacherGrades: React.FC = () => {
                                 onChange={(e) => handleScoreChange(grade.enrollmentId, "midtermScore", e.target.value)}
                                 className={`score-input ${isMidtermLocked ? 'locked' : ''}`}
                                 disabled={isMidtermLocked || saving}
-                                style={{ width: '80px', textAlign: 'center', backgroundColor: isMidtermLocked ? '#f5f5f5' : 'white' }}
+                                style={{ width: '80px', textAlign: 'center' }}
                               />
                             </td>
                             <td style={{ textAlign: "center" }}>
@@ -364,7 +364,7 @@ const TeacherGrades: React.FC = () => {
                                 onChange={(e) => handleScoreChange(grade.enrollmentId, "finalScore", e.target.value)}
                                 className={`score-input ${isFinalLocked ? 'locked' : ''}`}
                                 disabled={isFinalLocked || saving}
-                                style={{ width: '80px', textAlign: 'center', backgroundColor: isFinalLocked ? '#f5f5f5' : 'white' }}
+                                style={{ width: '80px', textAlign: 'center' }}
                               />
                             </td>
                             <td className="total-score" style={{ textAlign: "center", fontWeight: "bold", color: "var(--primary)" }}>

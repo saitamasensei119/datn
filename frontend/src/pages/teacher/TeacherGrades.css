@@ -74,6 +74,15 @@
   box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
 }
 
+.score-input:disabled, .score-input.locked {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: not-allowed;
+  opacity: 1;
+  border-color: transparent;
+}
+
 .total-score {
   font-weight: 600;
   color: var(--primary-color);
