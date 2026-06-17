@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { studentDashboardApi } from "../../services/api";
 import StudentLayout from "../../components/StudentLayout";
 import { BookOpen, Award, ClipboardList, TrendingUp } from "lucide-react";
 import "./StudentDashboard.css";
@@ -13,19 +14,26 @@ interface StudentStats {
 const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<StudentStats>({
-    enrolledCourses: 5,
-    gpa: 3.5,
-    completedCourses: 12,
-    credits: 36,
+    enrolledCourses: 0,
+    gpa: 0.0,
+    completedCourses: 0,
+    credits: 0,
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 500);
+    const fetchStats = async () => {
+      try {
+        const res = await studentDashboardApi.getStats();
+        setStats(res.data);
+      } catch (error) {
+        console.error("Error fetching student stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => clearTimeout(timer);
+    fetchStats();
   }, []);
 
   if (loading) {

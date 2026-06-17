@@ -59,6 +59,14 @@ export const subjectApi = {
   delete: (id: number) => api.delete(`/api/subjects/${id}`),
 };
 
+export const subjectConditionApi = {
+  getConditions: (subjectId: number) => api.get(`/api/subjects/${subjectId}/conditions`),
+  addCondition: (subjectId: number, data: { requiredSubjectId: number, conditionType: string }) => 
+    api.post(`/api/subjects/${subjectId}/conditions`, data),
+  removeCondition: (subjectId: number, conditionId: number) => 
+    api.delete(`/api/subjects/${subjectId}/conditions/${conditionId}`)
+};
+
 export const semesterApi = {
   getAll: () => api.get("/api/semesters"),
   getById: (id: number) => api.get(`/api/semesters/${id}`),
@@ -162,6 +170,10 @@ export const adminGradeApi = {
 export const studentGradeApi = {
   getMyGrades: () => api.get(`/api/student/grades`),
   getTranscript: () => api.get(`/api/student/grades/transcript`),
+};
+
+export const studentDashboardApi = {
+  getStats: () => api.get("/api/student/dashboard/summary"),
 };
 
 export default api;

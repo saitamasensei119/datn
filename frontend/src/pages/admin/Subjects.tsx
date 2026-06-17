@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { subjectApi, departmentApi } from "../../services/api";
+import { subjectApi, departmentApi, subjectConditionApi } from "../../services/api";
 import {
   Plus,
   Edit2,
   Trash2,
   X,
   AlertTriangle,
+  Link,
 } from "lucide-react";
 import AdminLayout from "../../components/AdminLayout";
 
@@ -26,6 +27,15 @@ interface Subject {
   labRequirement?: string;
   programCode?: string;
   note?: string;
+}
+
+interface SubjectCondition {
+  id: number;
+  subjectId: number;
+  requiredSubjectId: number;
+  requiredSubjectCode: string;
+  requiredSubjectName: string;
+  conditionType: string;
 }
 
 const getSubjectTypeLabel = (type: string) => {
@@ -57,6 +67,14 @@ const Subjects: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"create" | "edit">("create");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  // Condition Modal State
+  const [isConditionModalOpen, setIsConditionModalOpen] = useState(false);
+  const [selectedSubjectForCondition, setSelectedSubjectForCondition] = useState<Subject | null>(null);
+  const [conditions, setConditions] = useState<SubjectCondition[]>([]);
+  const [loadingConditions, setLoadingConditions] = useState(false);
+  const [newConditionRequiredId, setNewConditionRequiredId] = useState("");
+  const [newConditionType, setNewConditionType] = useState("PREREQUISITE");
 
   // Form Fields
   const [subjectCode, setSubjectCode] = useState("");
@@ -139,6 +157,76 @@ const Subjects: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setError("");
+  };
+
+  const openConditionModal = async (subj: Subject) => {
+    setSelectedSubjectForCondition(subj);
+    setIsConditionModalOpen(true);
+    setLoadingConditions(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await subjectConditionApi.getConditions(subj.id);
+      setConditions(res.data);
+    } catch (err: any) {
+      console.error(err);
+      setError("Không thể tải danh sách điều kiện môn học.");
+    } finally {
+      setLoadingConditions(false);
+    }
+  };
+
+  const handleCloseConditionModal = () => {
+    setIsConditionModalOpen(false);
+    setSelectedSubjectForCondition(null);
+    setNewConditionRequiredId("");
+    setNewConditionType("PREREQUISITE");
+  };
+
+  const handleAddCondition = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSubjectForCondition) return;
+
+    if (!newConditionRequiredId) {
+      setError("Vui lòng chọn môn học ràng buộc.");
+      return;
+    }
+
+    try {
+      await subjectConditionApi.addCondition(selectedSubjectForCondition.id, {
+        requiredSubjectId: Number(newConditionRequiredId),
+        conditionType: newConditionType
+      });
+      setSuccess("Thêm điều kiện thành công!");
+      
+      // reload conditions
+      const res = await subjectConditionApi.getConditions(selectedSubjectForCondition.id);
+      setConditions(res.data);
+      
+      setNewConditionRequiredId("");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || "Có lỗi xảy ra khi thêm điều kiện.");
+      setTimeout(() => setError(""), 5000);
+    }
+  };
+
+  const handleRemoveCondition = async (conditionId: number) => {
+    if (!selectedSubjectForCondition) return;
+    
+    if (!window.confirm("Bạn có chắc chắn muốn xóa điều kiện này?")) return;
+
+    try {
+      await subjectConditionApi.removeCondition(selectedSubjectForCondition.id, conditionId);
+      setSuccess("Xóa điều kiện thành công!");
+      setConditions(conditions.filter(c => c.id !== conditionId));
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || "Có lỗi xảy ra khi xóa điều kiện.");
+      setTimeout(() => setError(""), 5000);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -313,6 +401,14 @@ const Subjects: React.FC = () => {
                           <Edit2 size={16} />
                         </button>
                         <button
+                          className="btn-icon-only edit"
+                          style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", color: "#10b981", borderColor: "rgba(16, 185, 129, 0.2)" }}
+                          onClick={() => openConditionModal(subj)}
+                          title="Cài đặt điều kiện tiên quyết"
+                        >
+                          <Link size={16} />
+                        </button>
+                        <button
                           className="btn-icon-only delete"
                           onClick={() => handleDelete(subj.id)}
                           title="Xóa môn học"
@@ -410,7 +506,7 @@ const Subjects: React.FC = () => {
                     <input
                       id="subj-credits"
                       type="number"
-                      min="1"
+                      min="0"
                       max="10"
                       className="form-control"
                       value={credits}
@@ -539,6 +635,130 @@ const Subjects: React.FC = () => {
             </div>
           </div>
         )}
+
+      {/* Conditions Modal */}
+      {isConditionModalOpen && selectedSubjectForCondition && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: "700px" }}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                Điều Kiện Môn Học: {selectedSubjectForCondition.name} ({selectedSubjectForCondition.subjectCode})
+              </h3>
+              <button className="modal-close" onClick={handleCloseConditionModal}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {error && (
+                <div className="alert alert-danger" style={{ marginBottom: "1rem" }}>
+                  <AlertTriangle size={18} />
+                  <span>{error}</span>
+                </div>
+              )}
+              {success && (
+                <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
+                  <span>{success}</span>
+                </div>
+              )}
+
+              <div className="glass-card" style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
+                <h4 style={{ marginBottom: "1rem", fontSize: "1rem" }}>Thêm điều kiện mới</h4>
+                <form onSubmit={handleAddCondition} style={{ display: "flex", gap: "1rem", alignItems: "flex-end" }}>
+                  <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
+                    <label>Môn học ràng buộc</label>
+                    <select
+                      className="form-control"
+                      value={newConditionRequiredId}
+                      onChange={(e) => setNewConditionRequiredId(e.target.value)}
+                      required
+                    >
+                      <option value="" disabled>-- Chọn môn học --</option>
+                      {subjects.filter(s => s.id !== selectedSubjectForCondition.id).map(s => (
+                        <option key={s.id} value={s.id}>{s.subjectCode} - {s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <label>Loại điều kiện</label>
+                    <select
+                      className="form-control"
+                      value={newConditionType}
+                      onChange={(e) => setNewConditionType(e.target.value)}
+                    >
+                      <option value="PREREQUISITE">Môn tiên quyết</option>
+                      <option value="PRE_STUDY">Môn học trước</option>
+                      <option value="COREQUISITE">Môn song hành</option>
+                      <option value="EQUIVALENT">Môn tương đương</option>
+                    </select>
+                  </div>
+                  <button type="submit" className="btn btn-primary" style={{ padding: "0.6rem 1.2rem" }}>
+                    <Plus size={18} /> Thêm
+                  </button>
+                </form>
+              </div>
+
+              <h4 style={{ marginBottom: "1rem", fontSize: "1rem" }}>Danh sách điều kiện hiện tại</h4>
+              {loadingConditions ? (
+                <div style={{ textAlign: "center", padding: "2rem" }}>
+                  <div className="spinner"></div>
+                </div>
+              ) : conditions.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)", backgroundColor: "var(--card-bg)", borderRadius: "var(--radius-md)" }}>
+                  Môn học này hiện chưa có điều kiện ràng buộc nào.
+                </div>
+              ) : (
+                <div className="table-container">
+                  <table className="custom-table">
+                    <thead>
+                      <tr>
+                        <th>Mã môn</th>
+                        <th>Tên môn ràng buộc</th>
+                        <th>Loại điều kiện</th>
+                        <th style={{ width: "80px", textAlign: "center" }}>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {conditions.map((cond) => (
+                        <tr key={cond.id}>
+                          <td style={{ fontWeight: "600", color: "var(--primary)" }}>{cond.requiredSubjectCode}</td>
+                          <td>{cond.requiredSubjectName}</td>
+                          <td>
+                            <span className={`badge ${
+                              cond.conditionType === 'PREREQUISITE' ? 'badge-danger' : 
+                              cond.conditionType === 'PRE_STUDY' ? 'badge-warning' : 
+                              cond.conditionType === 'COREQUISITE' ? 'badge-info' : 'badge-secondary'
+                            }`}>
+                              {cond.conditionType === 'PREREQUISITE' ? 'Tiên quyết' :
+                               cond.conditionType === 'PRE_STUDY' ? 'Học trước' :
+                               cond.conditionType === 'COREQUISITE' ? 'Song hành' : 'Tương đương'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            <button
+                              className="btn-icon-only delete"
+                              onClick={() => handleRemoveCondition(cond.id)}
+                              title="Xóa điều kiện"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={handleCloseConditionModal}>
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };
