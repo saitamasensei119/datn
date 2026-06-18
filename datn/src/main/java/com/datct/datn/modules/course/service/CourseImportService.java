@@ -28,6 +28,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class CourseImportService {
 
     private final CourseRepository courseRepository;
@@ -48,14 +49,33 @@ public class CourseImportService {
             ? semesterRepository.findById(semesterId).orElse(null) 
             : null;
 
+        Runtime runtime = Runtime.getRuntime();
+        System.out.println(runtime.totalMemory()/ (1024 * 1024));
+        System.out.println(runtime.freeMemory()/ (1024 * 1024));
+        System.out.println(runtime.maxMemory()/ (1024 * 1024));
+        runtime.gc(); // Yêu cầu dọn rác để kết quả đo chính xác hơn
+        long memoryBefore = runtime.totalMemory() - runtime.freeMemory();
+        long totalDbSaveTime = 0;
+        long memoryUsedMB = 0;
+        long startTime = System.currentTimeMillis();
+        long peak =0;
+
+
+
         try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
+            long memoryAfter = runtime.totalMemory() - runtime.freeMemory();
+            memoryUsedMB = (memoryAfter - memoryBefore) / (1024 * 1024);
+            log.info("==== THÔNG SỐ RAM ====");
+            log.info("RAM tiêu thụ để bung file Excel: {} MB", memoryUsedMB);
+
             Sheet sheet = workbook.getSheetAt(0);
 
             Map<String, Course> courseCache = new HashMap<>();
 
             for (Row row : sheet) {
                 if (row.getRowNum() == 0) continue; // Skip header
-
+                long used = runtime.totalMemory() - runtime.freeMemory();
+                peak = Math.max(peak, used);
                 try {
                     String courseCode = getCellString(row.getCell(2));
                     if (courseCode.isEmpty()) continue;
@@ -82,7 +102,10 @@ public class CourseImportService {
                         subject.setManagementCode(mgmtCode);
                         subject.setSubjectType(getCellString(row.getCell(21)));
                         subject.setLabRequirement(getCellString(row.getCell(17)));
+                        
+                        long dbSaveStartTime1 = System.currentTimeMillis();
                         subjectRepository.save(subject);
+                        totalDbSaveTime += (System.currentTimeMillis() - dbSaveStartTime1);
 
                         // Handle Semester
                         String semesterName = getCellString(row.getCell(0));
@@ -113,12 +136,17 @@ public class CourseImportService {
                         gc.setMidtermWeight(0.5); // Default
                         course.setGradeComponent(gc);
 
+                        long dbSaveStartTime2 = System.currentTimeMillis();
                         course = courseRepository.save(course);
+                        totalDbSaveTime += (System.currentTimeMillis() - dbSaveStartTime2);
 
                         GradeSubmission midterm = GradeSubmission.builder().course(course).gradeType("MIDTERM").status("NOT_SUBMITTED").build();
                         GradeSubmission finalGrade = GradeSubmission.builder().course(course).gradeType("FINAL").status("NOT_SUBMITTED").build();
+                        
+                        long dbSaveStartTime3 = System.currentTimeMillis();
                         gradeSubmissionRepository.save(midterm);
                         gradeSubmissionRepository.save(finalGrade);
+                        totalDbSaveTime += (System.currentTimeMillis() - dbSaveStartTime3);
 
                         courseCache.put(courseCode, course);
                         courseCount++;
@@ -141,22 +169,44 @@ public class CourseImportService {
                         schedule.setRoom(room); // Có thể null nếu không tìm thấy
                     }
 
+                    long dbSaveStartTime4 = System.currentTimeMillis();
                     classScheduleRepository.save(schedule);
+                    totalDbSaveTime += (System.currentTimeMillis() - dbSaveStartTime4);
                     scheduleCount++;
 
                 } catch (Exception e) {
                     errorCount++;
                     System.out.println("Lỗi dòng " + row.getRowNum() + ": " + e.getMessage());
                 }
+
+                used = runtime.totalMemory() - runtime.freeMemory();
+                peak = Math.max(peak, used);
             }
 
         } catch (Exception e) {
             throw new RuntimeException("Lỗi đọc file Excel: " + e.getMessage());
         }
 
-        result.put("coursesCreated", courseCount);
-        result.put("schedulesCreated", scheduleCount);
-        result.put("errors", errorCount);
+        long endTime = System.currentTimeMillis();
+        long executionTime = endTime - startTime;
+        long parseTime = executionTime - totalDbSaveTime;
+
+        log.info("==== KẾT QUẢ ĐO LƯỜNG IMPORT COURSE (KHÔNG BATCH) ====");
+        log.info("Tổng thời gian: {} ms", executionTime);
+        log.info("- Thời gian Đọc/Xử lý dữ liệu (Parse): {} ms", parseTime);
+        log.info("- Thời gian Lưu vào DB (Single Insert): {} ms", totalDbSaveTime);
+        log.info("Số lớp xử lý thành công: {}", courseCount);
+        log.info("Số lịch học xử lý thành công: {}", scheduleCount);
+        log.info("RAM đỉnh: {}", peak / (1024 * 1024));
+
+        result.put("courseCount", courseCount);
+        result.put("scheduleCount", scheduleCount);
+        result.put("errorCount", errorCount);
+        result.put("timeTakenMs", executionTime);
+        result.put("parseTimeMs", parseTime);
+        result.put("dbSaveTimeMs", totalDbSaveTime);
+        result.put("memoryUsedMB", memoryUsedMB);
+        
         return result;
     }
 

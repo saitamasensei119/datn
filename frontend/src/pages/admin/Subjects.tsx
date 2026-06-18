@@ -59,7 +59,15 @@ const getSubjectTypeLabel = (type: string) => {
 
 const Subjects: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -95,12 +103,12 @@ const Subjects: React.FC = () => {
     setLoading(true);
     try {
       const [subjectRes, deptRes] = await Promise.all([
-        subjectApi.getAll(),
+        subjectApi.getPaginated(currentPage, pageSize, searchKeyword),
         departmentApi.getAll(),
       ]);
 
       // Standardize the subject model (in case response structure differs)
-      const mappedSubjects = subjectRes.data.map((subj: any) => ({
+      const mappedSubjects = subjectRes.data.content.map((subj: any) => ({
         id: subj.id,
         subjectCode: subj.subjectCode,
         name: subj.name,
@@ -116,6 +124,8 @@ const Subjects: React.FC = () => {
       }));
 
       setSubjects(mappedSubjects);
+      setTotalPages(subjectRes.data.totalPages);
+      setTotalElements(subjectRes.data.totalElements);
       setDepartments(deptRes.data);
     } catch (err: any) {
       console.error(err);
@@ -125,9 +135,24 @@ const Subjects: React.FC = () => {
     }
   };
 
+  const fetchAllSubjects = async () => {
+    if (allSubjects.length > 0) return; // Chỉ tải nếu chưa có
+    try {
+      const res = await subjectApi.getAll();
+      const mapped = res.data.map((subj: any) => ({
+        id: subj.id,
+        subjectCode: subj.subjectCode,
+        name: subj.name,
+      }));
+      setAllSubjects(mapped);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage, pageSize]);
 
   const openCreateModal = () => {
     setModalType("create");
@@ -173,6 +198,7 @@ const Subjects: React.FC = () => {
     setError("");
     setSuccess("");
     try {
+      await fetchAllSubjects(); // Load list of subjects for dropdown lazily
       const res = await subjectConditionApi.getConditions(subj.id);
       setConditions(res.data);
     } catch (err: any) {
@@ -252,6 +278,8 @@ const Subjects: React.FC = () => {
       const data = res.data;
       setSuccess(`Import thành công! Đã tạo ${data.created} môn, bỏ qua ${data.skipped} môn trùng, lỗi ${data.errors} dòng.`);
       setTimeout(() => setSuccess(""), 5000);
+      setCurrentPage(0);
+      setAllSubjects([]); // Reset để lazy load lại data mới nhất nếu mở modal
       fetchData();
     } catch (err: any) {
       console.error(err);
@@ -295,6 +323,8 @@ const Subjects: React.FC = () => {
         setSuccess("Cập nhật môn học thành công!");
       }
       setIsModalOpen(false);
+      setCurrentPage(0);
+      setAllSubjects([]); // Reset để lazy load lại
       fetchData();
       setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
@@ -316,6 +346,7 @@ const Subjects: React.FC = () => {
     try {
       await subjectApi.delete(id);
       setSuccess("Xóa môn học thành công!");
+      setAllSubjects([]); // Reset để lazy load lại
       fetchData();
       setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
@@ -373,6 +404,89 @@ const Subjects: React.FC = () => {
               <Plus size={18} />
               <span>Thêm môn học</span>
             </button>
+          </div>
+        </div>
+
+        {/* Search Bar and Page Size */}
+        <div style={{ marginBottom: "1.5rem", display: "flex", gap: "10px", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Tìm kiếm môn học..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              style={{ maxWidth: "300px" }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setCurrentPage(0);
+                  fetchData();
+                }
+              }}
+            />
+            <button className="btn btn-secondary" onClick={() => { setCurrentPage(0); fetchData(); }}>
+              Tìm kiếm
+            </button>
+            {searchKeyword && (
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setSearchKeyword("");
+                  setCurrentPage(0);
+                  // We need to wait for state to update, but useEffect doesn't track searchKeyword.
+                  // We can just fetch directly with empty string.
+                  setLoading(true);
+                  Promise.all([
+                    subjectApi.getPaginated(0, pageSize, ""),
+                    departmentApi.getAll(),
+                  ]).then(([subjectRes, deptRes]) => {
+                    const mappedSubjects = subjectRes.data.content.map((subj: any) => ({
+                      id: subj.id,
+                      subjectCode: subj.subjectCode,
+                      name: subj.name,
+                      credits: subj.credits,
+                      departmentName: subj.departmentName || "Chưa phân khoa",
+                      departmentId: subj.departmentId,
+                      englishName: subj.englishName || "",
+                      subjectType: subj.subjectType || "LT",
+                      labRequirement: subj.labRequirement || "",
+                      programCode: subj.programCode || "",
+                      note: subj.note || "",
+                      managementCode: subj.managementCode || "",
+                    }));
+                    setSubjects(mappedSubjects);
+                    setTotalPages(subjectRes.data.totalPages);
+                    setTotalElements(subjectRes.data.totalElements);
+                    setDepartments(deptRes.data);
+                  }).catch((err) => {
+                    console.error(err);
+                    setError("Không thể tải danh sách môn học hoặc khoa/ngành.");
+                  }).finally(() => {
+                    setLoading(false);
+                  });
+                }}
+              >
+                Hủy tìm
+              </button>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <span style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>
+              Hiển thị:
+            </span>
+            <select
+              className="form-control"
+              style={{ width: "80px", padding: "0.3rem 0.6rem" }}
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(0);
+              }}
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={30}>30</option>
+            </select>
           </div>
         </div>
 
@@ -487,6 +601,61 @@ const Subjects: React.FC = () => {
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="pagination-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', padding: '1rem', backgroundColor: 'var(--card-bg)', borderRadius: 'var(--radius-md)' }}>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                  Hiển thị {(currentPage * pageSize) + 1} đến {Math.min((currentPage + 1) * pageSize, totalElements)} trong tổng số {totalElements} môn học
+                </span>
+                <div style={{ display: 'flex', gap: '5px' }}>
+                  <button 
+                    className="btn btn-secondary" 
+                    disabled={currentPage === 0}
+                    onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                    style={{ padding: '0.4rem 0.8rem' }}
+                  >
+                    Trước
+                  </button>
+                  
+                  {/* Page numbers */}
+                  {Array.from({ length: totalPages }, (_, i) => {
+                    // Show first, last, current, and adjacent pages
+                    if (
+                      i === 0 || 
+                      i === totalPages - 1 || 
+                      (i >= currentPage - 1 && i <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={i}
+                          className={`btn ${currentPage === i ? 'btn-primary' : 'btn-secondary'}`}
+                          onClick={() => setCurrentPage(i)}
+                          style={{ padding: '0.4rem 0.8rem', minWidth: '40px' }}
+                        >
+                          {i + 1}
+                        </button>
+                      );
+                    } else if (
+                      i === currentPage - 2 || 
+                      i === currentPage + 2
+                    ) {
+                      return <span key={i} style={{ padding: '0.4rem', color: 'var(--text-muted)' }}>...</span>;
+                    }
+                    return null;
+                  })}
+                  
+                  <button 
+                    className="btn btn-secondary" 
+                    disabled={currentPage >= totalPages - 1}
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                    style={{ padding: '0.4rem 0.8rem' }}
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -755,7 +924,7 @@ const Subjects: React.FC = () => {
                       required
                     >
                       <option value="" disabled>-- Chọn môn học --</option>
-                      {subjects.filter(s => s.id !== selectedSubjectForCondition.id).map(s => (
+                      {allSubjects.filter(s => s.id !== selectedSubjectForCondition.id).map(s => (
                         <option key={s.id} value={s.id}>{s.subjectCode} - {s.name}</option>
                       ))}
                     </select>

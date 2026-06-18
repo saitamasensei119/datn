@@ -8,6 +8,9 @@ import com.datct.datn.modules.subject.repository.SubjectRepository;
 import com.datct.datn.modules.user.entity.Department;
 import com.datct.datn.modules.user.repository.DepartmentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -79,6 +82,19 @@ public class SubjectService {
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    public Page<SubjectResponse> getPaginated(int page, int size, String search) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Subject> subjectPage;
+
+        if (search != null && !search.trim().isEmpty()) {
+            subjectPage = subjectRepository.findBySubjectCodeContainingIgnoreCaseOrNameContainingIgnoreCase(search, search, pageable);
+        } else {
+            subjectPage = subjectRepository.findAll(pageable);
+        }
+
+        return subjectPage.map(this::mapToResponse);
     }
 
     public SubjectResponse getById(Long id) {

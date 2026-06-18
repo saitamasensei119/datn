@@ -80,7 +80,10 @@ CREATE TABLE semesters (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     start_date DATE,
-    end_date DATE
+    end_date DATE,
+
+    status VARCHAR(30) NOT NULL
+    -- PRE_REGISTRATION_OPEN, SCHEDULING, ENROLLMENT_OPEN, CLOSED
 );
 
 -- =========================
@@ -437,4 +440,32 @@ CREATE TABLE class_schedules (
     CONSTRAINT fk_class_schedule_room
         FOREIGN KEY (room_id)
         REFERENCES rooms(id)
+);
+
+-- =========================
+-- pre_registrations
+-- =========================
+CREATE TABLE pre_registrations (
+    id BIGSERIAL PRIMARY KEY,
+
+    student_id BIGINT NOT NULL,
+    subject_id BIGINT NOT NULL,
+    semester_id BIGINT NOT NULL,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_pre_registration_student
+        FOREIGN KEY (student_id)
+        REFERENCES students(id),
+
+    CONSTRAINT fk_pre_registration_subject
+        FOREIGN KEY (subject_id)
+        REFERENCES subjects(id),
+
+    CONSTRAINT fk_pre_registration_semester
+        FOREIGN KEY (semester_id)
+        REFERENCES semesters(id),
+
+    CONSTRAINT uk_pre_registration
+        UNIQUE (student_id, subject_id, semester_id)
 );

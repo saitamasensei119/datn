@@ -28,4 +28,7 @@ public class Semester {
 
     @Column(name = "end_date")
     private LocalDate endDate;
+
+    @Column(name = "status")
+    private String status = "PRE_REGISTRATION_CLOSED";
 }

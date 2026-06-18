@@ -11,6 +11,7 @@ import {
   Moon,
   LayoutDashboard,
   UserCheck,
+  ListPlus,
 } from "lucide-react";
 
 interface SidebarLinkProps {
@@ -66,6 +67,7 @@ const StudentLayout: React.FC<{ children: React.ReactNode }> = ({
   const getHeaderTitle = () => {
     const path = location.pathname;
     if (path.includes("/student/dashboard")) return "Tổng Quan Sinh Viên";
+    if (path.includes("/student/pre-registration")) return "Đăng Ký Nguyện Vọng";
     if (path.includes("/student/enroll")) return "Đăng Ký Học Phần";
     if (path.includes("/student/my-courses")) return "Lớp Học Phần của Tôi";
     if (path.includes("/student/my-grades")) return "Kết Quả Học Tập";
@@ -91,6 +93,11 @@ const StudentLayout: React.FC<{ children: React.ReactNode }> = ({
               label="Tổng Quan"
             />
             <li className="sidebar-divider">Học Tập</li>
+            <SidebarLink
+              to="/student/pre-registration"
+              icon={<ListPlus size={20} />}
+              label="Đăng Ký Nguyện Vọng"
+            />
             <SidebarLink
               to="/student/enroll"
               icon={<BookMarked size={20} />}

@@ -53,6 +53,8 @@ export const departmentApi = {
 
 export const subjectApi = {
   getAll: () => api.get("/api/subjects"),
+  getPaginated: (page: number, size: number, search?: string) =>
+    api.get("/api/subjects/page", { params: { page, size, search } }),
   getById: (id: number) => api.get(`/api/subjects/${id}`),
   create: (data: any) => api.post("/api/subjects", data),
   update: (id: number, data: any) => api.put(`/api/subjects/${id}`, data),
@@ -221,6 +223,16 @@ export const timeslotApi = {
   update: (id: number, data: any) => api.put(`/api/admin/timeslots/${id}`, data),
   delete: (id: number) => api.delete(`/api/admin/timeslots/${id}`),
   autoGenerate: () => api.post("/api/admin/timeslots/seed"),
+};
+
+export const preRegistrationApi = {
+  registerIntent: (subjectId: number, semesterId: number) =>
+    api.post("/api/pre-registrations", null, { params: { subjectId, semesterId } }),
+  removeIntent: (id: number) => api.delete(`/api/pre-registrations/${id}`),
+  getMyIntents: (semesterId: number) =>
+    api.get("/api/pre-registrations/me", { params: { semesterId } }),
+  getMyTotalCredits: (semesterId: number) =>
+    api.get("/api/pre-registrations/me/credits", { params: { semesterId } }),
 };
 
 export default api;

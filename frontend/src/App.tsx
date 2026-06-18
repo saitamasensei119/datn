@@ -26,6 +26,7 @@ import StudentCourseDetails from "./pages/student/StudentCourseDetails";
 import StudentMyGrades from "./pages/student/StudentMyGrades";
 import StudentTranscript from "./pages/student/StudentTranscript";
 import StudentAttendance from "./pages/student/StudentAttendance";
+import StudentPreRegistration from "./pages/student/StudentPreRegistration";
 
 // Protected Route
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -190,6 +191,14 @@ function App() {
         element={
           <ProtectedRoute requiredRole="STUDENT">
             <StudentAttendance />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/pre-registration"
+        element={
+          <ProtectedRoute requiredRole="STUDENT">
+            <StudentPreRegistration />
           </ProtectedRoute>
         }
       />

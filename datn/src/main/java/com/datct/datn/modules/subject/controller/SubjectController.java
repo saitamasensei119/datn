@@ -36,6 +36,15 @@ public class SubjectController {
         return subjectService.getAll();
     }
 
+    @GetMapping("/page")
+    public org.springframework.data.domain.Page<SubjectResponse> getPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search
+    ) {
+        return subjectService.getPaginated(page, size, search);
+    }
+
     @GetMapping("/{id}")
     public SubjectResponse getById(
             @PathVariable Long id
