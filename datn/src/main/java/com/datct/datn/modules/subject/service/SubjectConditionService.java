@@ -41,7 +41,7 @@ public class SubjectConditionService {
         // Kiểm tra xem đã tồn tại điều kiện này chưa
         boolean exists = subjectConditionRepository.findBySubjectId(subjectId).stream()
                 .anyMatch(c -> c.getRequiredSubject().getId().equals(request.getRequiredSubjectId()) 
-                            && c.getConditionType().equals(request.getConditionType()));
+                            && c.getConditionType() == request.getConditionType());
         
         if (exists) {
             throw new RuntimeException("Điều kiện này đã tồn tại cho môn học này.");

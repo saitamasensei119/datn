@@ -62,7 +62,7 @@ public class EnrollmentService {
                         request.getCourseId()
                 ).orElseThrow(() -> new RuntimeException("Course not found"));
 
-        validateSubjectConditions(student, course);
+        validateSubjectConditions(student, course, request.isIgnoreWarning());
 
         long currentStudents =
                 enrollmentRepository.countByCourseId(
@@ -108,7 +108,7 @@ public class EnrollmentService {
                         request.getCourseId()
                 ).orElseThrow(() -> new RuntimeException("Course not found"));
 
-        validateSubjectConditions(student, course);
+        validateSubjectConditions(student, course, request.isIgnoreWarning());
 
         // check already enrolled
         boolean exists =
@@ -142,7 +142,7 @@ public class EnrollmentService {
         enrollmentRepository.save(enrollment);
     }
 
-    private void validateSubjectConditions(Student student, Course course) {
+    private void validateSubjectConditions(Student student, Course course, boolean ignoreWarning) {
         List<SubjectCondition> conditions = subjectConditionRepository.findBySubjectId(course.getSubject().getId());
         for (SubjectCondition condition : conditions) {
             StudentSubjectResult result = studentSubjectResultRepository
@@ -150,17 +150,17 @@ public class EnrollmentService {
                     .orElse(null);
 
             switch (condition.getConditionType()) {
-                case "PREREQUISITE":
+                case PREREQUISITE:
                     if (result == null || !Boolean.TRUE.equals(result.getIsPassed())) {
                         throw new RuntimeException("Bạn chưa đạt môn tiên quyết: " + condition.getRequiredSubject().getName());
                     }
                     break;
-                case "PRE_STUDY":
+                case PRE_STUDY:
                     if (result == null) {
                         throw new RuntimeException("Bạn chưa học môn trước: " + condition.getRequiredSubject().getName());
                     }
                     break;
-                case "COREQUISITE":
+                case COREQUISITE:
                     if (result == null) {
                         boolean isEnrolled = enrollmentRepository.findByStudentId(student.getId()).stream()
                                 .anyMatch(e -> e.getCourse().getSubject().getId().equals(condition.getRequiredSubject().getId())
@@ -170,9 +170,11 @@ public class EnrollmentService {
                         }
                     }
                     break;
-                case "EQUIVALENT":
+                case EQUIVALENT:
                     if (result != null && Boolean.TRUE.equals(result.getIsPassed())) {
-                        throw new RuntimeException("Bạn đã qua môn tương đương: " + condition.getRequiredSubject().getName() + ", không được đăng ký môn này.");
+                        if (!ignoreWarning) {
+                            throw new RuntimeException("WARNING_EQUIVALENT:Bạn đã học và qua môn tương đương (" + condition.getRequiredSubject().getName() + "). Bạn có chắc chắn muốn đăng ký môn này không?");
+                        }
                     }
                     break;
             }

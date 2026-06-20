@@ -10,7 +10,8 @@ import java.util.Optional;
 
 @Repository
 public interface PreRegistrationRepository extends JpaRepository<PreRegistration, Long> {
-    
+    List<PreRegistration> findByStudentId(Long studentId);
+
     List<PreRegistration> findByStudentIdAndSemesterId(Long studentId, Long semesterId);
     
     Optional<PreRegistration> findByStudentIdAndSubjectIdAndSemesterId(Long studentId, Long subjectId, Long semesterId);

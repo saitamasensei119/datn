@@ -1,5 +1,7 @@
 package com.datct.datn.modules.subject.DTO;
 
+import com.datct.datn.modules.subject.entity.ConditionType;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,5 +17,5 @@ public class SubjectConditionDTO {
     private Long requiredSubjectId;
     private String requiredSubjectCode;
     private String requiredSubjectName;
-    private String conditionType;
+    private ConditionType conditionType;
 }

@@ -1,5 +1,7 @@
 package com.datct.datn.modules.subject.DTO;
 
+import com.datct.datn.modules.subject.entity.ConditionType;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,5 +11,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateSubjectConditionRequest {
     private Long requiredSubjectId;
-    private String conditionType;
+    private ConditionType conditionType;
 }

@@ -21,13 +21,14 @@ public class PreRegistrationController {
     public ResponseEntity<?> registerIntent(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam Long subjectId,
-            @RequestParam Long semesterId) {
+            @RequestParam Long semesterId,
+            @RequestParam(required = false, defaultValue = "false") boolean ignoreWarning) {
         if (!"STUDENT".equals(userDetails.getUser().getRole().name())) {
             return ResponseEntity.status(403).body("Chỉ sinh viên mới được đăng ký nguyện vọng.");
         }
         try {
             Long userId = userDetails.getUser().getId();
-            PreRegistrationResponse response = preRegistrationService.registerIntent(userId, subjectId, semesterId);
+            PreRegistrationResponse response = preRegistrationService.registerIntent(userId, subjectId, semesterId, ignoreWarning);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

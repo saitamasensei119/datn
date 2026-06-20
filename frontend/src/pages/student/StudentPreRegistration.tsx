@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { semesterApi, subjectApi, preRegistrationApi } from "../../../services/api";
+import { semesterApi, subjectApi, preRegistrationApi } from "../../services/api";
 import { AlertTriangle, Plus, Trash2, Check, Search } from "lucide-react";
+import StudentLayout from "../../components/StudentLayout";
 import "./StudentEnroll.css"; // Reuse enroll styles
 
 interface Semester {
@@ -53,7 +54,7 @@ const StudentPreRegistration: React.FC = () => {
       const sem = semesters.find(s => s.id === Number(selectedSemester));
       if (sem) {
         setSemesterStatus(sem.status);
-        if (sem.status === "OPEN") {
+        if (sem.status === "PRE_REGISTRATION_OPEN") {
           fetchMyIntents(sem.id);
           fetchSubjects();
         } else {
@@ -114,17 +115,26 @@ const StudentPreRegistration: React.FC = () => {
     fetchSubjects();
   };
 
-  const handleRegister = async (subjectId: number) => {
+  const handleRegister = async (subjectId: number, ignoreWarning: boolean = false) => {
     setError("");
     setSuccess("");
     try {
-      await preRegistrationApi.registerIntent(subjectId, Number(selectedSemester));
+      await preRegistrationApi.registerIntent(subjectId, Number(selectedSemester), ignoreWarning);
       setSuccess("Đăng ký nguyện vọng thành công!");
       fetchMyIntents(Number(selectedSemester));
       setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data || "Có lỗi xảy ra khi đăng ký nguyện vọng.");
+      const errMsg = err.response?.data || "Có lỗi xảy ra khi đăng ký nguyện vọng.";
+      
+      if (typeof errMsg === 'string' && errMsg.startsWith("WARNING_EQUIVALENT:")) {
+        const confirmMsg = errMsg.substring("WARNING_EQUIVALENT:".length);
+        if (window.confirm(confirmMsg)) {
+          handleRegister(subjectId, true);
+        }
+      } else {
+        setError(errMsg);
+      }
     }
   };
 
@@ -150,8 +160,9 @@ const StudentPreRegistration: React.FC = () => {
   const progressPercent = Math.min((totalCredits / 25) * 100, 100);
 
   return (
-    <div className="enroll-page">
-      <div className="card">
+    <StudentLayout>
+      <div className="page-container">
+        <div className="card">
         <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 className="card-title">Đăng Ký Nguyện Vọng</h2>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -171,7 +182,7 @@ const StudentPreRegistration: React.FC = () => {
           </div>
         </div>
 
-        {semesterStatus !== "OPEN" ? (
+        {semesterStatus !== "PRE_REGISTRATION_OPEN" ? (
           <div className="alert alert-warning" style={{ margin: "2rem" }}>
             <AlertTriangle size={20} />
             <span style={{ marginLeft: "10px" }}>
@@ -354,7 +365,8 @@ const StudentPreRegistration: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </StudentLayout>
   );
 };
 

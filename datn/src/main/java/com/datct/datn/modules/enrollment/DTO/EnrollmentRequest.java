@@ -10,4 +10,6 @@ public class EnrollmentRequest {
     private Long studentId;
 
     private Long courseId;
+
+    private boolean ignoreWarning;
 }

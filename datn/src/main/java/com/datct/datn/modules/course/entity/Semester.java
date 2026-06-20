@@ -29,6 +29,7 @@ public class Semester {
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private String status = "PRE_REGISTRATION_CLOSED";
+    private SemesterStatus status = SemesterStatus.CLOSED;
 }

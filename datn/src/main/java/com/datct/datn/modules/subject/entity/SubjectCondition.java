@@ -26,6 +26,7 @@ public class SubjectCondition {
     @JoinColumn(name = "required_subject_id", nullable = false)
     private Subject requiredSubject;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "condition_type", nullable = false, length = 50)
-    private String conditionType;
+    private ConditionType conditionType;
 }

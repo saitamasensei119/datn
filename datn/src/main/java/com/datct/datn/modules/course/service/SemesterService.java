@@ -34,6 +34,10 @@ public class SemesterService {
                 request.getEndDate()
         );
 
+        if (request.getStatus() != null) {
+            semester.setStatus(request.getStatus());
+        }
+
         Semester saved =
                 semesterRepository.save(semester);
 
@@ -86,6 +90,10 @@ public class SemesterService {
                 request.getEndDate()
         );
 
+        if (request.getStatus() != null) {
+            semester.setStatus(request.getStatus());
+        }
+
         Semester updated =
                 semesterRepository.save(semester);
 
@@ -105,7 +113,8 @@ public class SemesterService {
                 semester.getId(),
                 semester.getName(),
                 semester.getStartDate(),
-                semester.getEndDate()
+                semester.getEndDate(),
+                semester.getStatus()
         );
     }
 }

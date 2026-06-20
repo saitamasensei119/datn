@@ -148,7 +148,7 @@ export const enrollmentApi = {
   enroll: (data: { studentId: number; courseId: number }) =>
     api.post("/api/student/enrollments", data),
   enrollMultiple: (
-    enrollments: Array<{ studentId: number; courseId: number }>,
+    enrollments: Array<{ studentId: number; courseId: number; ignoreWarning?: boolean }>,
   ) => Promise.all(enrollments.map((e) => api.post("/api/student/enrollments", e))),
   unenroll: (courseId: number) => api.delete(`/api/student/enrollments/${courseId}`),
 };
@@ -226,8 +226,8 @@ export const timeslotApi = {
 };
 
 export const preRegistrationApi = {
-  registerIntent: (subjectId: number, semesterId: number) =>
-    api.post("/api/pre-registrations", null, { params: { subjectId, semesterId } }),
+  registerIntent: (subjectId: number, semesterId: number, ignoreWarning: boolean = false) =>
+    api.post("/api/pre-registrations", null, { params: { subjectId, semesterId, ignoreWarning } }),
   removeIntent: (id: number) => api.delete(`/api/pre-registrations/${id}`),
   getMyIntents: (semesterId: number) =>
     api.get("/api/pre-registrations/me", { params: { semesterId } }),
