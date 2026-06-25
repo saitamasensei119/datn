@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -50,27 +51,44 @@ public class CourseImportService {
             : null;
 
         Runtime runtime = Runtime.getRuntime();
-        System.out.println(runtime.totalMemory()/ (1024 * 1024));
-        System.out.println(runtime.freeMemory()/ (1024 * 1024));
-        System.out.println(runtime.maxMemory()/ (1024 * 1024));
-        runtime.gc(); // Yêu cầu dọn rác để kết quả đo chính xác hơn
+        runtime.gc();
         long memoryBefore = runtime.totalMemory() - runtime.freeMemory();
         long totalDbSaveTime = 0;
         long memoryUsedMB = 0;
         long startTime = System.currentTimeMillis();
-        long peak =0;
+        long peak = 0;
 
+        // 1. In-memory Caching (Diệt 80,000 câu lệnh SELECT N+1)
+        Map<String, Subject> subjectMap = new HashMap<>();
+        for (Subject s : subjectRepository.findAll()) {
+            if (s.getSubjectCode() != null) subjectMap.put(s.getSubjectCode().toLowerCase().trim(), s);
+        }
+        Map<String, Semester> semesterMap = new HashMap<>();
+        for (Semester s : semesterRepository.findAll()) {
+            if (s.getName() != null) semesterMap.put(s.getName().toLowerCase().trim(), s);
+        }
+        Map<String, Room> roomMap = new HashMap<>();
+        for (Room r : roomRepository.findAll()) {
+            if (r.getRoomName() != null) roomMap.put(r.getRoomName().toLowerCase().trim(), r);
+        }
+        Map<String, Course> courseMap = new HashMap<>();
+        for (Course c : courseRepository.findAll()) {
+            if (c.getCourseCode() != null) courseMap.put(c.getCourseCode().toLowerCase().trim(), c);
+        }
 
+        List<ClassSchedule> scheduleBatch = new java.util.ArrayList<>();
 
-        try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
+        try (InputStream is = file.getInputStream(); 
+             Workbook workbook = com.github.pjfanning.xlsx.StreamingReader.builder()
+                .rowCacheSize(100)
+                .bufferSize(4096)
+                .open(is)) {
             long memoryAfter = runtime.totalMemory() - runtime.freeMemory();
             memoryUsedMB = (memoryAfter - memoryBefore) / (1024 * 1024);
             log.info("==== THÔNG SỐ RAM ====");
             log.info("RAM tiêu thụ để bung file Excel: {} MB", memoryUsedMB);
 
             Sheet sheet = workbook.getSheetAt(0);
-
-            Map<String, Course> courseCache = new HashMap<>();
 
             for (Row row : sheet) {
                 if (row.getRowNum() == 0) continue; // Skip header
@@ -80,19 +98,15 @@ public class CourseImportService {
                     String courseCode = getCellString(row.getCell(2));
                     if (courseCode.isEmpty()) continue;
 
-                    Course course = courseCache.get(courseCode);
-                    if (course == null) {
-                        course = courseRepository.findByCourseCodeContainingIgnoreCase(courseCode).stream()
-                                .filter(c -> c.getCourseCode().equalsIgnoreCase(courseCode))
-                                .findFirst()
-                                .orElse(null);
-                    }
+                    Course course = courseMap.get(courseCode.toLowerCase());
 
                     // Create Course if not exists
                     if (course == null) {
                         String subjectCode = getCellString(row.getCell(4));
-                        Subject subject = subjectRepository.findBySubjectCode(subjectCode)
-                                .orElseThrow(() -> new RuntimeException("Không tìm thấy môn học mã: " + subjectCode));
+                        Subject subject = subjectMap.get(subjectCode.toLowerCase());
+                        if (subject == null) {
+                            throw new RuntimeException("Không tìm thấy môn học mã: " + subjectCode);
+                        }
 
                         // Update Subject extra info
                         String mgmtCode = getCellString(row.getCell(23));
@@ -111,10 +125,7 @@ public class CourseImportService {
                         String semesterName = getCellString(row.getCell(0));
                         Semester semester = defaultSemester;
                         if (semester == null && !semesterName.isEmpty()) {
-                            semester = semesterRepository.findAll().stream()
-                                    .filter(s -> s.getName().equalsIgnoreCase(semesterName))
-                                    .findFirst()
-                                    .orElse(null);
+                            semester = semesterMap.get(semesterName.toLowerCase());
                         }
                         if (semester == null) {
                             throw new RuntimeException("Không tìm thấy học kỳ: " + semesterName);
@@ -124,7 +135,7 @@ public class CourseImportService {
                         course.setCourseCode(courseCode);
                         course.setSubject(subject);
                         course.setSemester(semester);
-                        course.setLecturer(null); // Gán sau
+                        course.setLecturer(null);
                         course.setMaxStudents(getCellInt(row.getCell(19)));
                         course.setAttachedCourseCode(getCellString(row.getCell(3)));
                         course.setNote(getCellString(row.getCell(8)));
@@ -133,7 +144,7 @@ public class CourseImportService {
 
                         GradeComponent gc = new GradeComponent();
                         gc.setCourse(course);
-                        gc.setMidtermWeight(0.5); // Default
+                        gc.setMidtermWeight(0.5);
                         course.setGradeComponent(gc);
 
                         long dbSaveStartTime2 = System.currentTimeMillis();
@@ -148,7 +159,7 @@ public class CourseImportService {
                         gradeSubmissionRepository.save(finalGrade);
                         totalDbSaveTime += (System.currentTimeMillis() - dbSaveStartTime3);
 
-                        courseCache.put(courseCode, course);
+                        courseMap.put(courseCode.toLowerCase(), course);
                         courseCount++;
                     }
 
@@ -165,22 +176,33 @@ public class CourseImportService {
 
                     String roomName = getCellString(row.getCell(16));
                     if (!roomName.isEmpty()) {
-                        Room room = roomRepository.findByRoomName(roomName).orElse(null);
-                        schedule.setRoom(room); // Có thể null nếu không tìm thấy
+                        Room room = roomMap.get(roomName.toLowerCase());
+                        schedule.setRoom(room);
                     }
 
-                    long dbSaveStartTime4 = System.currentTimeMillis();
-                    classScheduleRepository.save(schedule);
-                    totalDbSaveTime += (System.currentTimeMillis() - dbSaveStartTime4);
+                    scheduleBatch.add(schedule);
                     scheduleCount++;
+
+                    // Gom lô 500 bản ghi Batch Insert
+                    if (scheduleBatch.size() >= 500) {
+                        long dbSaveStartTime4 = System.currentTimeMillis();
+                        classScheduleRepository.saveAll(scheduleBatch);
+                        totalDbSaveTime += (System.currentTimeMillis() - dbSaveStartTime4);
+                        scheduleBatch.clear();
+                    }
 
                 } catch (Exception e) {
                     errorCount++;
                     System.out.println("Lỗi dòng " + row.getRowNum() + ": " + e.getMessage());
                 }
+            }
 
-                used = runtime.totalMemory() - runtime.freeMemory();
-                peak = Math.max(peak, used);
+            // Lưu nốt số lịch học còn dư trong lô
+            if (!scheduleBatch.isEmpty()) {
+                long dbSaveStartTime4 = System.currentTimeMillis();
+                classScheduleRepository.saveAll(scheduleBatch);
+                totalDbSaveTime += (System.currentTimeMillis() - dbSaveStartTime4);
+                scheduleBatch.clear();
             }
 
         } catch (Exception e) {
@@ -191,13 +213,13 @@ public class CourseImportService {
         long executionTime = endTime - startTime;
         long parseTime = executionTime - totalDbSaveTime;
 
-        log.info("==== KẾT QUẢ ĐO LƯỜNG IMPORT COURSE (KHÔNG BATCH) ====");
+        log.info("==== KẾT QUẢ ĐO LƯỜNG IMPORT COURSE (FULL OPTIMIZATION B2) ====");
         log.info("Tổng thời gian: {} ms", executionTime);
         log.info("- Thời gian Đọc/Xử lý dữ liệu (Parse): {} ms", parseTime);
-        log.info("- Thời gian Lưu vào DB (Single Insert): {} ms", totalDbSaveTime);
+        log.info("- Thời gian Lưu vào DB (Batch Insert): {} ms", totalDbSaveTime);
         log.info("Số lớp xử lý thành công: {}", courseCount);
         log.info("Số lịch học xử lý thành công: {}", scheduleCount);
-        log.info("RAM đỉnh: {}", peak / (1024 * 1024));
+        log.info("RAM đỉnh: {} MB", peak / (1024 * 1024));
 
         result.put("courseCount", courseCount);
         result.put("scheduleCount", scheduleCount);

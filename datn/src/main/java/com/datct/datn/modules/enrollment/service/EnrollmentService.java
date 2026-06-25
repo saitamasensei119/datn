@@ -142,6 +142,38 @@ public class EnrollmentService {
         enrollmentRepository.save(enrollment);
     }
 
+    @Transactional
+    public void processEnrollmentTask(Long studentId, Long courseId, boolean ignoreWarning) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        // Use Pessimistic Lock to ensure strictly serial processing for this course
+        Course course = courseRepository.findByIdWithPessimisticLock(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        // Validate Subject Conditions
+        validateSubjectConditions(student, course, ignoreWarning);
+
+        // Check if already enrolled
+        boolean exists = enrollmentRepository.existsByStudentIdAndCourseId(student.getId(), courseId);
+        if (exists) {
+            throw new RuntimeException("Student already enrolled");
+        }
+
+        // Re-count to strictly enforce capacity constraint under lock
+        long currentStudents = enrollmentRepository.countByCourseId(course.getId());
+        if (currentStudents >= course.getMaxStudents()) {
+            throw new RuntimeException("Course is full");
+        }
+
+        Enrollment enrollment = new Enrollment();
+        enrollment.setStudent(student);
+        enrollment.setCourse(course);
+        enrollment.setEnrolledAt(LocalDateTime.now());
+
+        enrollmentRepository.save(enrollment);
+    }
+
     private void validateSubjectConditions(Student student, Course course, boolean ignoreWarning) {
         List<SubjectCondition> conditions = subjectConditionRepository.findBySubjectId(course.getSubject().getId());
         for (SubjectCondition condition : conditions) {
@@ -249,5 +281,12 @@ public class EnrollmentService {
 
         // No status check for admin
         enrollmentRepository.delete(enrollment);
+    }
+
+    public Long getCurrentStudentId() {
+        Long userId = SecurityUtil.getCurrentUserId();
+        Student student = studentRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+        return student.getId();
     }
 }

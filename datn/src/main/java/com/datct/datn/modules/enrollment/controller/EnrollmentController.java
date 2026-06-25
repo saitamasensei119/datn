@@ -10,22 +10,28 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import com.datct.datn.modules.enrollment.service.EnrollmentProducer;
+import org.springframework.http.HttpStatus;
+
 @RestController
 @RequestMapping("/api/student/enrollments")
 @RequiredArgsConstructor
 public class EnrollmentController {
 
     private final EnrollmentService enrollmentService;
+    private final EnrollmentProducer enrollmentProducer;
 
     @PostMapping
     public ResponseEntity<String> enroll(
             @RequestBody EnrollmentRequest request
     ) {
+        Long studentId = enrollmentService.getCurrentStudentId();
+        
+        // Push to RabbitMQ and return 202 Accepted
+        enrollmentProducer.sendEnrollmentRequest(studentId, request.getCourseId(), request.isIgnoreWarning());
 
-        enrollmentService.studentEnroll(request);
-
-        return ResponseEntity.ok(
-                "Enroll success"
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(
+                "Đơn đăng ký đang được xử lý"
         );
     }
     @GetMapping

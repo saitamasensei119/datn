@@ -29,7 +29,7 @@ public class SubjectImportService {
     static {
         DEPARTMENT_MAP.put("BGDTC", 6L);
         DEPARTMENT_MAP.put("KGDQP", 7L);
-        DEPARTMENT_MAP.put("KKTQL", 8L);
+        DEPARTMENT_MAP.put("KKTVQL", 8L);
         DEPARTMENT_MAP.put("KML", 9L);
         DEPARTMENT_MAP.put("KNN", 5L);
         DEPARTMENT_MAP.put("KSPKT", 10L);
