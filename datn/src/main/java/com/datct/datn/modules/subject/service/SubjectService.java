@@ -69,6 +69,12 @@ public class SubjectService {
         subject.setProgramCode(request.getProgramCode());
         subject.setNote(request.getNote());
         subject.setManagementCode(request.getManagementCode() != null ? request.getManagementCode() : "");
+        subject.setTheoryCredits(request.getTheoryCredits() != null ? request.getTheoryCredits() : 0);
+        subject.setExerciseCredits(request.getExerciseCredits() != null ? request.getExerciseCredits() : 0);
+        subject.setPracticalCredits(request.getPracticalCredits() != null ? request.getPracticalCredits() : 0);
+        subject.setSelfStudyHours(request.getSelfStudyHours() != null ? request.getSelfStudyHours() : 0);
+        subject.setLabBuilding(request.getLabBuilding());
+        subject.setPreferredBuilding(request.getPreferredBuilding());
 
         Subject saved =
                 subjectRepository.save(subject);
@@ -151,6 +157,12 @@ public class SubjectService {
         subject.setProgramCode(request.getProgramCode());
         subject.setNote(request.getNote());
         subject.setManagementCode(request.getManagementCode() != null ? request.getManagementCode() : "");
+        subject.setTheoryCredits(request.getTheoryCredits() != null ? request.getTheoryCredits() : 0);
+        subject.setExerciseCredits(request.getExerciseCredits() != null ? request.getExerciseCredits() : 0);
+        subject.setPracticalCredits(request.getPracticalCredits() != null ? request.getPracticalCredits() : 0);
+        subject.setSelfStudyHours(request.getSelfStudyHours() != null ? request.getSelfStudyHours() : 0);
+        subject.setLabBuilding(request.getLabBuilding());
+        subject.setPreferredBuilding(request.getPreferredBuilding());
 
         Subject updated =
                 subjectRepository.save(subject);
@@ -183,7 +195,13 @@ public class SubjectService {
                 subject.getLabRequirement(),
                 subject.getProgramCode(),
                 subject.getNote(),
-                subject.getManagementCode()
+                subject.getManagementCode(),
+                subject.getTheoryCredits() != null ? subject.getTheoryCredits() : 0,
+                subject.getExerciseCredits() != null ? subject.getExerciseCredits() : 0,
+                subject.getPracticalCredits() != null ? subject.getPracticalCredits() : 0,
+                subject.getSelfStudyHours() != null ? subject.getSelfStudyHours() : 0,
+                subject.getLabBuilding(),
+                subject.getPreferredBuilding()
         );
     }
 }

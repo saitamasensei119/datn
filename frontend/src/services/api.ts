@@ -103,6 +103,8 @@ export const studentApi = {
 
 export const courseApi = {
   getAll: () => api.get("/api/admin/courses"),
+  getPaginated: (page: number, size: number, search?: string) =>
+    api.get("/api/admin/courses/page", { params: { page, size, search } }),
   getById: (id: number) => api.get(`/api/admin/courses/${id}`),
   create: (data: any) => api.post("/api/admin/courses", data),
   update: (id: number, data: any) => api.put(`/api/admin/courses/${id}`, data),
@@ -233,6 +235,15 @@ export const preRegistrationApi = {
     api.get("/api/pre-registrations/me", { params: { semesterId } }),
   getMyTotalCredits: (semesterId: number) =>
     api.get("/api/pre-registrations/me/credits", { params: { semesterId } }),
+};
+
+export const timetableApi = {
+  generateCourses: (semesterId: number, defaultMaxStudents: number = 40) =>
+    api.post("/api/admin/timetable/generate-courses", { semesterId, defaultMaxStudents }),
+  scheduleCourses: (semesterId: number) =>
+    api.post("/api/admin/timetable/schedule", { semesterId }),
+  exportExcel: (semesterId: number) =>
+    api.get("/api/admin/timetable/export-excel", { params: { semesterId }, responseType: "blob" }),
 };
 
 export default api;

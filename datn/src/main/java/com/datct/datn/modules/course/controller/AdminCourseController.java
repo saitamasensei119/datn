@@ -43,6 +43,15 @@ public class AdminCourseController {
         return courseService.getAll();
     }
 
+    @GetMapping("/page")
+    public org.springframework.data.domain.Page<CourseResponse> getPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search
+    ) {
+        return courseService.getPaginatedAdminCourses(page, size, search);
+    }
+
     @GetMapping("/{courseId}/students")
     public List<StudentResponse> getStudentsByCourseId(
             @PathVariable Long courseId

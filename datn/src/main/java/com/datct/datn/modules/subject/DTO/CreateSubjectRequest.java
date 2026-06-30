@@ -26,4 +26,16 @@ public class CreateSubjectRequest {
     private String note;
 
     private String managementCode;
+
+    private Integer theoryCredits = 0;
+
+    private Integer exerciseCredits = 0;
+
+    private Integer practicalCredits = 0;
+
+    private Integer selfStudyHours = 0;
+
+    private String labBuilding;
+
+    private String preferredBuilding;
 }

@@ -22,4 +22,7 @@ public class Room {
 
     @Column(nullable = false)
     private Integer capacity;
+
+    @Column(name = "building", length = 50)
+    private String building;
 }

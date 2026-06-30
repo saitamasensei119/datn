@@ -37,6 +37,7 @@ public class EnrollmentService {
 
     @Transactional
     public void enroll(EnrollmentRequest request) {
+        try { Thread.sleep(150); } catch (Exception ignored) {}
 
         // check already enrolled
         boolean exists =

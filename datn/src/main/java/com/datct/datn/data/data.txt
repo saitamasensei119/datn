@@ -107,6 +107,13 @@ CREATE TABLE subjects (
     credits INT NOT NULL,
     department_id BIGINT,
 
+    theory_credits INTEGER DEFAULT 0 NOT NULL,
+    exercise_credits INTEGER DEFAULT 0 NOT NULL,
+    practical_credits INTEGER DEFAULT 0 NOT NULL,
+    self_study_hours INTEGER DEFAULT 0 NOT NULL,
+    lab_building VARCHAR(50), -- tòa thí nghiệm
+    preferred_building VARCHAR(50), -- tòa ưu tiên học lt-bt
+
     CONSTRAINT fk_subjects_department
         FOREIGN KEY (department_id)
         REFERENCES departments(id)
@@ -176,7 +183,8 @@ CREATE TABLE enrollments (
 CREATE TABLE rooms (
     id BIGSERIAL PRIMARY KEY,
     room_name VARCHAR(100) UNIQUE NOT NULL,
-    capacity INT NOT NULL
+    capacity INT NOT NULL,
+    building VARCHAR(50)
 );
 
 -- =========================

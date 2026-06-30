@@ -6,6 +6,7 @@ import {
   semesterApi,
   adminEnrollmentApi,
   adminGradeApi,
+  timetableApi,
 } from "../../services/api";
 import {
   Plus,
@@ -16,6 +17,9 @@ import {
   BookOpen,
   CheckCircle,
   Unlock,
+  Calendar,
+  Zap,
+  Download,
 } from "lucide-react";
 import AdminLayout from "../../components/AdminLayout";
 
@@ -76,6 +80,15 @@ const Courses: React.FC = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -214,18 +227,107 @@ const Courses: React.FC = () => {
     }
   };
 
+  const handleGenerateCourses = async () => {
+    if (semesters.length === 0) {
+      alert("Chưa có học kỳ nào trong hệ thống.");
+      return;
+    }
+    const inputStr = prompt("Nhập ID Học kỳ cần tự động sinh Lớp Học Phần từ Nguyện Vọng:", semesters[0].id.toString());
+    if (!inputStr) return;
+    const targetSemesterId = Number(inputStr);
+
+    if (!window.confirm("Bạn có chắc muốn tự động sinh Lớp Học Phần từ dữ liệu đăng ký nguyện vọng cho học kỳ này?")) return;
+
+    setIsGenerating(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await timetableApi.generateCourses(targetSemesterId);
+      setSuccess(`${res.data.message} (Đã tạo: ${res.data.coursesGenerated} lớp)`);
+      setTimeout(() => setSuccess(""), 5000);
+      fetchData(searchCourseCode);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || err.message || "Lỗi khi tự động sinh lớp học phần.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleScheduleCourses = async () => {
+    if (semesters.length === 0) {
+      alert("Chưa có học kỳ nào trong hệ thống.");
+      return;
+    }
+    const inputStr = prompt("Nhập ID Học kỳ cần tự động xếp Thời Khóa Biểu bằng Google OR-Tools:", semesters[0].id.toString());
+    if (!inputStr) return;
+    const targetSemesterId = Number(inputStr);
+
+    if (!window.confirm("Bạn có chắc muốn chạy bộ giải Google OR-Tools để tự động xếp thời khóa biểu cho các lớp ở trạng thái PLANNED?")) return;
+
+    setIsScheduling(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await timetableApi.scheduleCourses(targetSemesterId);
+      setSuccess(`${res.data.message} (Đã xếp: ${res.data.schedulesCreated} lịch học)`);
+      setTimeout(() => setSuccess(""), 5000);
+      fetchData(searchCourseCode);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || err.message || "Lỗi khi tự động xếp thời khóa biểu.");
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    if (semesters.length === 0) {
+      alert("Chưa có học kỳ nào trong hệ thống.");
+      return;
+    }
+    const inputStr = prompt("Nhập ID Học kỳ cần tải xuống file Excel Thời Khóa Biểu:", semesters[0].id.toString());
+    if (!inputStr) return;
+    const targetSemesterId = Number(inputStr);
+
+    setIsExporting(true);
+    try {
+      const res = await timetableApi.exportExcel(targetSemesterId);
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `ThoiKhoaBieu_HocKy_${targetSemesterId}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setSuccess("Xuất file Excel Thời Khóa Biểu thành công!");
+      setTimeout(() => setSuccess(""), 4000);
+    } catch (err: any) {
+      console.error(err);
+      setError("Lỗi khi tải xuống file Excel.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const fetchData = async (courseCodeSearch?: string) => {
     setLoading(true);
     try {
       const [courseRes, subjRes, lectRes, semRes] = await Promise.all([
-        courseCodeSearch ? courseApi.searchAdminCourses(courseCodeSearch) : courseApi.getAll(),
+        courseApi.getPaginated(currentPage, pageSize, courseCodeSearch),
         subjectApi.getAll(),
         lecturerApi.getAll(),
         semesterApi.getAll(),
       ]);
 
+      const rawCourses = courseRes.data.content || courseRes.data;
+      if (courseRes.data.totalPages !== undefined) {
+        setTotalPages(courseRes.data.totalPages);
+        setTotalElements(courseRes.data.totalElements);
+      }
+
       // Map courses with additional data
-      const mappedCourses = courseRes.data.map((course: any) => ({
+      const mappedCourses = rawCourses.map((course: any) => ({
         id: course.id,
         courseCode: course.courseCode,
         maxStudents: course.maxStudents,
@@ -274,7 +376,7 @@ const Courses: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage, pageSize]);
 
   const openCreateModal = () => {
     setModalType("create");
@@ -430,15 +532,42 @@ const Courses: React.FC = () => {
             <button
               className="btn btn-secondary"
               onClick={() => fileInputRef.current?.click()}
-              disabled={loading || isImporting}
+              disabled={loading || isImporting || isGenerating || isScheduling}
             >
               <BookOpen size={18} />
               <span>{isImporting ? 'Đang Import...' : 'Import Excel'}</span>
             </button>
             <button
+              className="btn"
+              style={{ backgroundColor: "#10b981", color: "white", display: "flex", alignItems: "center", gap: "6px", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: 500, cursor: "pointer" }}
+              onClick={handleGenerateCourses}
+              disabled={loading || isGenerating || isScheduling}
+            >
+              <Zap size={18} />
+              <span>{isGenerating ? 'Đang sinh lớp...' : 'Sinh lớp từ nguyện vọng'}</span>
+            </button>
+            <button
+              className="btn"
+              style={{ backgroundColor: "#6366f1", color: "white", display: "flex", alignItems: "center", gap: "6px", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: 500, cursor: "pointer" }}
+              onClick={handleScheduleCourses}
+              disabled={loading || isGenerating || isScheduling || isExporting}
+            >
+              <Calendar size={18} />
+              <span>{isScheduling ? 'Đang xếp TKB...' : 'Xếp TKB (OR-Tools)'}</span>
+            </button>
+            <button
+              className="btn"
+              style={{ backgroundColor: "#f59e0b", color: "white", display: "flex", alignItems: "center", gap: "6px", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: 500, cursor: "pointer" }}
+              onClick={handleExportExcel}
+              disabled={loading || isGenerating || isScheduling || isExporting}
+            >
+              <Download size={18} />
+              <span>{isExporting ? 'Đang xuất Excel...' : 'Xuất Excel TKB'}</span>
+            </button>
+            <button
               className="btn btn-primary"
               onClick={openCreateModal}
-              disabled={loading}
+              disabled={loading || isGenerating || isScheduling || isExporting}
             >
               <Plus size={18} />
               <span>Tạo lớp học phần</span>
@@ -598,6 +727,60 @@ const Courses: React.FC = () => {
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="pagination-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', padding: '1rem', backgroundColor: 'var(--card-bg)', borderRadius: 'var(--radius-md)' }}>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                  Hiển thị {(currentPage * pageSize) + 1} đến {Math.min((currentPage + 1) * pageSize, totalElements)} trong tổng số {totalElements} lớp học phần
+                </span>
+                <div style={{ display: 'flex', gap: '5px' }}>
+                  <button 
+                    className="btn btn-secondary" 
+                    disabled={currentPage === 0}
+                    onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                    style={{ padding: '0.4rem 0.8rem' }}
+                  >
+                    Trước
+                  </button>
+                  
+                  {/* Page numbers */}
+                  {Array.from({ length: totalPages }, (_, i) => {
+                    if (
+                      i === 0 || 
+                      i === totalPages - 1 || 
+                      (i >= currentPage - 1 && i <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={i}
+                          className={`btn ${currentPage === i ? 'btn-primary' : 'btn-secondary'}`}
+                          onClick={() => setCurrentPage(i)}
+                          style={{ padding: '0.4rem 0.8rem', minWidth: '40px' }}
+                        >
+                          {i + 1}
+                        </button>
+                      );
+                    } else if (
+                      i === currentPage - 2 || 
+                      i === currentPage + 2
+                    ) {
+                      return <span key={i} style={{ padding: '0.4rem 0.2rem', color: 'var(--text-muted)' }}>...</span>;
+                    }
+                    return null;
+                  })}
+
+                  <button 
+                    className="btn btn-secondary" 
+                    disabled={currentPage === totalPages - 1 || totalPages === 0}
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                    style={{ padding: '0.4rem 0.8rem' }}
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

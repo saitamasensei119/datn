@@ -51,4 +51,22 @@ public class Subject {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     private Department department;
+
+    @Column(name = "theory_credits", nullable = false)
+    private Integer theoryCredits = 0;
+
+    @Column(name = "exercise_credits", nullable = false)
+    private Integer exerciseCredits = 0;
+
+    @Column(name = "practical_credits", nullable = false)
+    private Integer practicalCredits = 0;
+
+    @Column(name = "self_study_hours", nullable = false)
+    private Integer selfStudyHours = 0;
+
+    @Column(name = "lab_building", length = 50)
+    private String labBuilding;
+
+    @Column(name = "preferred_building", length = 50)
+    private String preferredBuilding;
 }

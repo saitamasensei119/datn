@@ -28,6 +28,11 @@ public interface CourseRepository
     );
     List<Course> findByLecturerId(Long lecturerId);
     List<Course> findByCourseCodeContainingIgnoreCase(String courseCode);
+    Page<Course> findByCourseCodeContainingIgnoreCaseOrSubject_NameContainingIgnoreCase(
+            String courseCode,
+            String subjectName,
+            Pageable pageable
+    );
     Page<Course> findByStatus(
             CourseStatus status,
             Pageable pageable
@@ -49,4 +54,6 @@ public interface CourseRepository
             String name,
             Pageable pageable
     );
+
+    List<Course> findBySemesterIdAndStatus(Long semesterId, CourseStatus status);
 }

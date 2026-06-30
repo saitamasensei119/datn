@@ -1,49 +1,75 @@
-const axios = require('axios');
-
 // THIẾT LẬP THÔNG SỐ TEST
 const BASE_URL = 'http://localhost:8080';
-const ADMIN_TOKEN = 'ĐIỀN_TOKEN_ADMIN_VÀO_ĐÂY'; // Lấy token từ local storage khi login admin
-const COURSE_ID = 1; // Chọn 1 Lớp học phần trống có sĩ số tối đa (ví dụ 40)
-const CONCURRENT_REQUESTS = 200; // Số lượng request gửi ĐỒNG THỜI cùng 1 lúc
+const ADMIN_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBnbWFpbC5jb20iLCJ1c2VySWQiOjEsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc4MjM4NDU0NSwiZXhwIjoxNzgyNDcwOTQ1fQ.hV_WEKU1scdgPYgt2IVmJqhGArVMvMdRdEub-SpvNrs';
+const COURSE_ID = 8; // Chọn 1 Lớp học phần trống
 
-async function testOldCode() {
-  console.log(`Bắt đầu test CŨ (Có thể bị Race Condition/Crash) với ${CONCURRENT_REQUESTS} requests...`);
-  
-  const requests = [];
-  
-  for (let i = 1; i <= CONCURRENT_REQUESTS; i++) {
-    // Gọi thẳng vào API cũ của Admin (Không qua RabbitMQ, Không dùng Pessimistic Lock)
-    // Giả sử có sẵn các studentId từ 1 đến 200 trong DB
-    const payload = {
-      studentId: i,
-      courseId: COURSE_ID,
-      ignoreWarning: true
-    };
+const args = process.argv.slice(2);
+const TOTAL_REQUESTS = parseInt(args[0]) || 2000;
+const MODE = args[1] === 'new' ? 'new' : 'old'; 
+const TARGET_URL = MODE === 'new' 
+  ? `${BASE_URL}/api/admin/enrollments/async`
+  : `${BASE_URL}/api/admin/enrollments`;
 
-    const req = axios.post(`${BASE_URL}/api/admin/enrollments`, payload, {
-      headers: { Authorization: `Bearer ${ADMIN_TOKEN}` }
-    }).catch(err => err.response ? err.response.data : err.message);
-    
-    requests.push(req);
-  }
+// Gửi request nhưng KHÔNG ĐỢI (Non-blocking fire)
+function fireRequest(studentId) {
+  const payload = { studentId, courseId: COURSE_ID, ignoreWarning: true };
+  
+  return fetch(TARGET_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ADMIN_TOKEN}` },
+    body: JSON.stringify(payload)
+  }).then(async res => {
+    const text = await res.text();
+    return res.ok ? text : `Error: ${text}`;
+  }).catch(err => `Error: ${err.message}`);
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function runTsunamiTest() {
+  const modeName = MODE === 'new' ? 'KIẾN TRÚC MỚI (RabbitMQ + Lock)' : 'KIẾN TRÚC CŨ (Monolith Sync)';
+  console.log(`=============================================================`);
+  console.log(`🌊 BẮT ĐẦU KỊCH BẢN TSUNAMI FLOOD: ${modeName}`);
+  console.log(`🎯 Mục tiêu: ${TOTAL_REQUESTS} requests dồn dập không nghỉ vào Lớp ID = ${COURSE_ID}`);
+  console.log(`=============================================================\n`);
 
   const startTime = Date.now();
-  const results = await Promise.all(requests);
-  const endTime = Date.now();
+  const allPromises = [];
+  const CHUNK_SIZE = 250; // Mỗi 20ms nhả 250 TCP Sockets vào OS
+
+  console.log(`🚀 Đang xả lũ ${TOTAL_REQUESTS} requests vào máy chủ...`);
+
+  for (let i = 1; i <= TOTAL_REQUESTS; i += CHUNK_SIZE) {
+    const chunkCount = Math.min(CHUNK_SIZE, TOTAL_REQUESTS - i + 1);
+    for (let j = 0; j < chunkCount; j++) {
+      allPromises.push(fireRequest(i + j));
+    }
+    // Nghỉ 20ms giữa các đợt nhả socket để hệ điều hành Windows không khóa cổng mạng,
+    // nhưng KHÔNG dùng await Promise.all -> Máy chủ Spring Boot sẽ hứng chịu toàn bộ cùng lúc!
+    await sleep(20); 
+  }
+
+  console.log(`💥 Đã xả xong toàn bộ sockets trong ${Date.now() - startTime} ms! Đang đợi máy chủ gồng mình xử lý...`);
+
+  const results = await Promise.all(allPromises);
+  const duration = Date.now() - startTime;
 
   let successCount = 0;
   let errorCount = 0;
+  let timeoutCount = 0;
 
   results.forEach(res => {
-    if (res === 'Enroll success') successCount++;
+    if (res === 'Enroll success' || res.includes('RabbitMQ')) successCount++;
+    else if (res.includes('timed out') || res.includes('500') || res.includes('504')) timeoutCount++;
     else errorCount++;
   });
 
-  console.log(`\n--- KẾT QUẢ TEST MÃ CŨ ---`);
-  console.log(`Thời gian xử lý: ${endTime - startTime} ms`);
-  console.log(`Thành công (Đã ghi vào DB): ${successCount}`);
-  console.log(`Thất bại (Bị từ chối): ${errorCount}`);
-  console.log(`\n=> HÃY KIỂM TRA LẠI DATABASE: Sĩ số tối đa của lớp học là bao nhiêu? Số lượng đăng ký thành công (${successCount}) có vượt quá sĩ số không? Nếu có, hệ thống đã dính Race Condition!`);
+  console.log(`\n📊 --- KẾT QUẢ xẢ LŨ ${TOTAL_REQUESTS} REQUESTS ---`);
+  console.log(`⏱️ Tổng thời gian chịu đựng: ${duration} ms (~${ (duration/1000).toFixed(2) } giây)`);
+  console.log(`✅ Thành Công (HTTP 200/202): ${successCount}`);
+  console.log(`❌ Từ chối bình thường (DB Full hoặc hết sĩ số): ${errorCount}`);
+  console.log(`🔥 SẬP SERVER (Lỗi 500/504 / Connection Pool Timeout): ${timeoutCount}`);
+  console.log(`=============================================================\n`);
 }
 
-testOldCode();
+runTsunamiTest();

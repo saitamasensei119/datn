@@ -32,4 +32,16 @@ public class SubjectResponse {
     private String note;
 
     private String managementCode;
+
+    private Integer theoryCredits;
+
+    private Integer exerciseCredits;
+
+    private Integer practicalCredits;
+
+    private Integer selfStudyHours;
+
+    private String labBuilding;
+
+    private String preferredBuilding;
 }
