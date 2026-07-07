@@ -33,6 +33,9 @@ public interface CourseRepository
             String subjectName,
             Pageable pageable
     );
+
+    @Query("SELECT c FROM Course c WHERE (:semesterId IS NULL OR c.semester.id = :semesterId) AND (:search IS NULL OR :search = '' OR LOWER(c.courseCode) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(c.subject.name) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<Course> findPaginated(@Param("semesterId") Long semesterId, @Param("search") String search, Pageable pageable);
     Page<Course> findByStatus(
             CourseStatus status,
             Pageable pageable

@@ -45,6 +45,14 @@ public class SubjectController {
         return subjectService.getPaginated(page, size, search);
     }
 
+    @GetMapping("/simple-search")
+    public List<com.datct.datn.modules.subject.DTO.SubjectSimpleResponse> searchSimple(
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "15") int limit
+    ) {
+        return subjectService.searchSimple(keyword, limit);
+    }
+
     @GetMapping("/{id}")
     public SubjectResponse getById(
             @PathVariable Long id

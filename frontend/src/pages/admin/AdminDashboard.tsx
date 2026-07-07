@@ -8,7 +8,7 @@ import {
   TrendingUp,
   AlertCircle,
 } from "lucide-react";
-import { studentApi, lecturerApi, courseApi } from "../../services/api";
+import { adminDashboardApi } from "../../services/api";
 import "./AdminDashboard.css";
 
 interface DashboardStats {
@@ -32,18 +32,15 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
-        const [studentStats, teachersRes, coursesRes] = await Promise.all([
-          studentApi.getStats(),
-          lecturerApi.getAll(),
-          courseApi.getAll(),
-        ]);
-
-        setStats({
-          activeStudents: studentStats.data.activeCount || 0,
-          suspendedStudents: studentStats.data.suspendedCount || 0,
-          totalTeachers: teachersRes.data?.length || 0,
-          totalCourses: coursesRes.data?.length || 0,
-        });
+        const res = await adminDashboardApi.getOverview();
+        if (res.data) {
+          setStats({
+            activeStudents: res.data.activeStudents || 0,
+            suspendedStudents: res.data.suspendedStudents || 0,
+            totalTeachers: res.data.totalTeachers || 0,
+            totalCourses: res.data.totalCourses || 0,
+          });
+        }
       } catch (err) {
         console.error("Error fetching dashboard stats:", err);
         setError("Không thể tải dữ liệu thống kê");

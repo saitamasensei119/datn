@@ -41,6 +41,13 @@ const Students: React.FC = () => {
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [showAllStudents, setShowAllStudents] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [tableSearchKeyword, setTableSearchKeyword] = useState("");
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"create" | "edit">("create");
@@ -54,33 +61,50 @@ const Students: React.FC = () => {
   const [studentCode, setStudentCode] = useState("");
   const [departmentId, setDepartmentId] = useState<string>("");
 
+  const fetchStudents = async (page = currentPage, size = pageSize, search = tableSearchKeyword) => {
+    setLoading(true);
+    try {
+      const studRes = await studentApi.getPaginated(page, size, search);
+      const content = studRes.data.content || studRes.data;
+      if (studRes.data.totalPages !== undefined) {
+        setTotalPages(studRes.data.totalPages);
+        setTotalElements(studRes.data.totalElements);
+      }
+      setStudents(
+        content.map((s: any) => ({
+          id: s.id,
+          studentCode: s.studentCode,
+          fullName: s.fullName,
+          email: s.email,
+          departmentName: s.departmentName || "Chưa có",
+          status: s.status || "ACTIVE",
+        })),
+      );
+    } catch (err: any) {
+      console.error(err);
+      setError("Không thể tải danh sách sinh viên.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchDepts = async () => {
       try {
-        const [deptRes, studRes] = await Promise.all([
-          departmentApi.getAll(),
-          studentApi.getAll(),
-        ]);
+        const deptRes = await departmentApi.getAll();
         setDepartments(deptRes.data);
-        setStudents(
-          studRes.data.map((s: any) => ({
-            id: s.id,
-            studentCode: s.studentCode,
-            fullName: s.fullName,
-            email: s.email,
-            departmentName: s.departmentName || "Chưa có",
-            status: s.status || "ACTIVE",
-          })),
-        );
       } catch (err: any) {
         console.error(err);
-        setError("Không thể tải danh sách.");
-      } finally {
-        setLoading(false);
       }
     };
     fetchDepts();
   }, []);
+
+  useEffect(() => {
+    if (showAllStudents && !searchedStudent) {
+      fetchStudents(currentPage, pageSize, tableSearchKeyword);
+    }
+  }, [currentPage, pageSize, showAllStudents, searchedStudent]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,6 +237,7 @@ const Students: React.FC = () => {
         setSuccess(
           `Thêm sinh viên thành công! Sinh viên được tạo có ID: ${response.data.id}`,
         );
+        if (showAllStudents) fetchStudents();
         // Automatically search for the newly created student to display them
         setSearchCode(response.data.studentCode);
         setSearchedStudent({
@@ -233,6 +258,7 @@ const Students: React.FC = () => {
         };
         await studentApi.update(searchedStudent.id, payload);
         setSuccess("Cập nhật thông tin sinh viên thành công!");
+        if (showAllStudents) fetchStudents();
         // Refresh search results
         setSearchedStudent({
           ...searchedStudent,
@@ -497,80 +523,154 @@ const Students: React.FC = () => {
         {/* All Students List */}
         {!searchedStudent && showAllStudents && (
           <div className="table-container" style={{ marginTop: "2rem" }}>
-            <h3 style={{ marginBottom: "1rem" }}>Danh sách tất cả sinh viên</h3>
-            {students.length === 0 ? (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
+              <h3 style={{ margin: 0 }}>Danh sách tất cả sinh viên (Tổng: {totalElements})</h3>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  placeholder="Lọc theo mã, tên, email..."
+                  className="form-control"
+                  style={{ width: "240px", padding: "6px 12px", fontSize: "0.9rem" }}
+                  value={tableSearchKeyword}
+                  onChange={(e) => setTableSearchKeyword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setCurrentPage(0);
+                      fetchStudents(0, pageSize, tableSearchKeyword);
+                    }
+                  }}
+                />
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setCurrentPage(0);
+                    fetchStudents(0, pageSize, tableSearchKeyword);
+                  }}
+                >
+                  Lọc
+                </button>
+              </div>
+            </div>
+            {loading ? (
+              <div style={{ textAlign: "center", padding: "2rem" }}>Đang tải dữ liệu...</div>
+            ) : students.length === 0 ? (
               <div style={{ textAlign: "center", padding: "2rem" }}>
-                Chưa có sinh viên nào
+                Chưa có sinh viên nào phù hợp
               </div>
             ) : (
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: "100px" }}>Mã SV</th>
-                    <th>Họ tên</th>
-                    <th>Email</th>
-                    <th style={{ width: "110px", textAlign: "center" }}>Trạng thái</th>
-                    <th style={{ width: "100px", textAlign: "center" }}>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((s) => (
-                    <tr key={s.id}>
-                      <td style={{ fontWeight: "600", color: "var(--primary)" }}>
-                        {s.studentCode}
-                      </td>
-                      <td>{s.fullName}</td>
-                      <td>{s.email}</td>
-                      <td style={{ textAlign: "center", fontSize: "0.85rem" }}>
-                        <span
-                          style={{
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                            backgroundColor:
-                              s.status === "ACTIVE"
-                                ? "#c8e6c9"
-                                : s.status === "SUSPENDED"
-                                  ? "#ffcccc"
-                                  : "#e8f5e9",
-                            color:
-                              s.status === "ACTIVE"
-                                ? "#2e7d32"
-                                : s.status === "SUSPENDED"
-                                  ? "#c62828"
-                                  : "#1b5e20",
-                          }}
-                        >
-                          {s.status === "ACTIVE"
-                            ? "Đang học"
-                            : s.status === "SUSPENDED"
-                              ? "Tạm ngừng"
-                              : "Tốt nghiệp"}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <button
-                          className="btn-icon-only delete"
-                          onClick={() => openStatusModal(s)}
-                          title="Thay đổi trạng thái"
-                          style={{ fontSize: "0.8rem" }}
-                        >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <circle cx="12" cy="12" r="10" />
-                            <path d="M12 8v4M12 16h.01" />
-                          </svg>
-                        </button>
-                      </td>
+              <>
+                <table className="custom-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: "100px" }}>Mã SV</th>
+                      <th>Họ tên</th>
+                      <th>Email</th>
+                      <th style={{ width: "110px", textAlign: "center" }}>Trạng thái</th>
+                      <th style={{ width: "100px", textAlign: "center" }}>Thao tác</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {students.map((s) => (
+                      <tr key={s.id}>
+                        <td style={{ fontWeight: "600", color: "var(--primary)" }}>
+                          {s.studentCode}
+                        </td>
+                        <td>{s.fullName}</td>
+                        <td>{s.email}</td>
+                        <td style={{ textAlign: "center", fontSize: "0.85rem" }}>
+                          <span
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              backgroundColor:
+                                s.status === "ACTIVE"
+                                  ? "#c8e6c9"
+                                  : s.status === "SUSPENDED"
+                                    ? "#ffcccc"
+                                    : "#e8f5e9",
+                              color:
+                                s.status === "ACTIVE"
+                                  ? "#2e7d32"
+                                  : s.status === "SUSPENDED"
+                                    ? "#c62828"
+                                    : "#1b5e20",
+                            }}
+                          >
+                            {s.status === "ACTIVE"
+                              ? "Đang học"
+                              : s.status === "SUSPENDED"
+                                ? "Tạm ngừng"
+                                : "Tốt nghiệp"}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            className="btn-icon-only delete"
+                            onClick={() => openStatusModal(s)}
+                            title="Thay đổi trạng thái"
+                            style={{ fontSize: "0.8rem" }}
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <circle cx="12" cy="12" r="10" />
+                              <path d="M12 8v4M12 16h.01" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Pagination Controls */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--card-border)", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.9rem", color: "var(--text-secondary)" }}>
+                    <span>Hiển thị</span>
+                    <select
+                      className="form-control"
+                      style={{ width: "70px", padding: "4px 8px", display: "inline-block" }}
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(0);
+                      }}
+                    >
+                      <option value="10">10</option>
+                      <option value="20">20</option>
+                      <option value="50">50</option>
+                    </select>
+                    <span>dòng/trang</span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <span style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>
+                      Trang {totalPages === 0 ? 0 : currentPage + 1} / {totalPages}
+                    </span>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        disabled={currentPage === 0 || loading}
+                        onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
+                      >
+                        Trước
+                      </button>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        disabled={currentPage >= totalPages - 1 || totalPages === 0 || loading}
+                        onClick={() => setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1))}
+                      >
+                        Sau
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         )}

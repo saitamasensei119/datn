@@ -55,4 +55,13 @@ public class AdminStudentController {
     public List<StudentResponse> getAllStudents() {
         return studentService.getAllStudents();
     }
+
+    @GetMapping("/page")
+    public org.springframework.data.domain.Page<StudentResponse> getPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search
+    ) {
+        return studentService.getPaginated(page, size, search);
+    }
 }

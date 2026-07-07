@@ -47,9 +47,10 @@ public class AdminCourseController {
     public org.springframework.data.domain.Page<CourseResponse> getPaginated(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String search
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long semesterId
     ) {
-        return courseService.getPaginatedAdminCourses(page, size, search);
+        return courseService.getPaginatedAdminCourses(page, size, search, semesterId);
     }
 
     @GetMapping("/{courseId}/students")

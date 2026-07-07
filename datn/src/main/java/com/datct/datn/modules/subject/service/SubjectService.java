@@ -103,6 +103,11 @@ public class SubjectService {
         return subjectPage.map(this::mapToResponse);
     }
 
+    public List<com.datct.datn.modules.subject.DTO.SubjectSimpleResponse> searchSimple(String keyword, int limit) {
+        Pageable pageable = PageRequest.of(0, limit);
+        return subjectRepository.searchSimple(keyword != null ? keyword : "", pageable);
+    }
+
     public SubjectResponse getById(Long id) {
 
         Subject subject =

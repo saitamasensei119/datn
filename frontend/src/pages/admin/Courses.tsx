@@ -89,11 +89,23 @@ const Courses: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
+  const [filterSemesterId, setFilterSemesterId] = useState<string>("");
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"create" | "edit">("create");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  // Action Modal State (Generate Courses, Schedule Timetable, Export Excel)
+  const [actionModal, setActionModal] = useState<{
+    isOpen: boolean;
+    type: "generate" | "schedule" | "export" | null;
+    semesterId: string;
+  }>({
+    isOpen: false,
+    type: null,
+    semesterId: "",
+  });
 
   // Form Fields
   const [courseCode, setCourseCode] = useState("");
@@ -108,6 +120,42 @@ const Courses: React.FC = () => {
   const [midtermWeight, setMidtermWeight] = useState<number>(0.3);
 
   const [searchCourseCode, setSearchCourseCode] = useState("");
+
+  // Subject Autocomplete State
+  const [subjectSearchText, setSubjectSearchText] = useState("");
+  const [subjectSuggestions, setSubjectSuggestions] = useState<any[]>([]);
+  const [isSearchingSubject, setIsSearchingSubject] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  useEffect(() => {
+    if (!showSuggestions || !isModalOpen) return;
+    const timer = setTimeout(async () => {
+      setIsSearchingSubject(true);
+      try {
+        const res = await subjectApi.searchSimple(subjectSearchText, 15);
+        setSubjectSuggestions(res.data || []);
+      } catch (err) {
+        console.error("Error searching subjects:", err);
+      } finally {
+        setIsSearchingSubject(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [subjectSearchText, showSuggestions, isModalOpen]);
+
+  const fetchLecturers = async () => {
+    if (lecturers.length > 0) return;
+    try {
+      const lectRes = await lecturerApi.getAll();
+      const mappedLecturers = lectRes.data.map((l: any) => ({
+        id: l.id,
+        fullName: l.fullName || l.user?.fullName || "Chưa có tên",
+      }));
+      setLecturers(mappedLecturers);
+    } catch (err) {
+      console.error("Error fetching lecturers:", err);
+    }
+  };
 
   // Student Modal State
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
@@ -227,96 +275,90 @@ const Courses: React.FC = () => {
     }
   };
 
-  const handleGenerateCourses = async () => {
+  const openActionModal = (type: "generate" | "schedule" | "export") => {
     if (semesters.length === 0) {
-      alert("Chưa có học kỳ nào trong hệ thống.");
+      setError("Chưa có học kỳ nào trong hệ thống.");
       return;
     }
-    const inputStr = prompt("Nhập ID Học kỳ cần tự động sinh Lớp Học Phần từ Nguyện Vọng:", semesters[0].id.toString());
-    if (!inputStr) return;
-    const targetSemesterId = Number(inputStr);
+    setActionModal({
+      isOpen: true,
+      type,
+      semesterId: semesters[0]?.id.toString() || "",
+    });
+  };
 
-    if (!window.confirm("Bạn có chắc muốn tự động sinh Lớp Học Phần từ dữ liệu đăng ký nguyện vọng cho học kỳ này?")) return;
+  const confirmActionModal = async () => {
+    const targetSemesterId = Number(actionModal.semesterId);
+    if (!targetSemesterId) return;
 
-    setIsGenerating(true);
-    setError("");
-    setSuccess("");
-    try {
-      const res = await timetableApi.generateCourses(targetSemesterId);
-      setSuccess(`${res.data.message} (Đã tạo: ${res.data.coursesGenerated} lớp)`);
-      setTimeout(() => setSuccess(""), 5000);
-      fetchData(searchCourseCode);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data?.message || err.message || "Lỗi khi tự động sinh lớp học phần.");
-    } finally {
-      setIsGenerating(false);
+    const currentType = actionModal.type;
+    setActionModal({ ...actionModal, isOpen: false });
+
+    if (currentType === "generate") {
+      setIsGenerating(true);
+      setError("");
+      setSuccess("");
+      try {
+        const res = await timetableApi.generateCourses(targetSemesterId);
+        setSuccess(`${res.data.message} (Đã tạo: ${res.data.coursesGenerated} lớp)`);
+        setTimeout(() => setSuccess(""), 5000);
+        fetchData(searchCourseCode);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.response?.data?.message || err.message || "Lỗi khi tự động sinh lớp học phần.");
+      } finally {
+        setIsGenerating(false);
+      }
+    } else if (currentType === "schedule") {
+      setIsScheduling(true);
+      setError("");
+      setSuccess("");
+      try {
+        const res = await timetableApi.scheduleCourses(targetSemesterId);
+        setSuccess(`${res.data.message} (Đã xếp: ${res.data.schedulesCreated} lịch học)`);
+        setTimeout(() => setSuccess(""), 5000);
+        fetchData(searchCourseCode);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.response?.data?.message || err.message || "Lỗi khi tự động xếp thời khóa biểu.");
+      } finally {
+        setIsScheduling(false);
+      }
+    } else if (currentType === "export") {
+      setIsExporting(true);
+      setError("");
+      setSuccess("");
+      try {
+        const res = await timetableApi.exportExcel(targetSemesterId);
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `ThoiKhoaBieu_HocKy_${targetSemesterId}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setSuccess("Xuất file Excel Thời Khóa Biểu thành công!");
+        setTimeout(() => setSuccess(""), 4000);
+      } catch (err: any) {
+        console.error(err);
+        setError("Lỗi khi tải xuống file Excel.");
+      } finally {
+        setIsExporting(false);
+      }
     }
   };
 
-  const handleScheduleCourses = async () => {
-    if (semesters.length === 0) {
-      alert("Chưa có học kỳ nào trong hệ thống.");
-      return;
-    }
-    const inputStr = prompt("Nhập ID Học kỳ cần tự động xếp Thời Khóa Biểu bằng Google OR-Tools:", semesters[0].id.toString());
-    if (!inputStr) return;
-    const targetSemesterId = Number(inputStr);
-
-    if (!window.confirm("Bạn có chắc muốn chạy bộ giải Google OR-Tools để tự động xếp thời khóa biểu cho các lớp ở trạng thái PLANNED?")) return;
-
-    setIsScheduling(true);
-    setError("");
-    setSuccess("");
-    try {
-      const res = await timetableApi.scheduleCourses(targetSemesterId);
-      setSuccess(`${res.data.message} (Đã xếp: ${res.data.schedulesCreated} lịch học)`);
-      setTimeout(() => setSuccess(""), 5000);
-      fetchData(searchCourseCode);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.response?.data?.message || err.message || "Lỗi khi tự động xếp thời khóa biểu.");
-    } finally {
-      setIsScheduling(false);
-    }
-  };
-
-  const handleExportExcel = async () => {
-    if (semesters.length === 0) {
-      alert("Chưa có học kỳ nào trong hệ thống.");
-      return;
-    }
-    const inputStr = prompt("Nhập ID Học kỳ cần tải xuống file Excel Thời Khóa Biểu:", semesters[0].id.toString());
-    if (!inputStr) return;
-    const targetSemesterId = Number(inputStr);
-
-    setIsExporting(true);
-    try {
-      const res = await timetableApi.exportExcel(targetSemesterId);
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `ThoiKhoaBieu_HocKy_${targetSemesterId}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setSuccess("Xuất file Excel Thời Khóa Biểu thành công!");
-      setTimeout(() => setSuccess(""), 4000);
-    } catch (err: any) {
-      console.error(err);
-      setError("Lỗi khi tải xuống file Excel.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const fetchData = async (courseCodeSearch?: string) => {
+  const fetchData = async (courseCodeSearch?: string, semId?: string) => {
     setLoading(true);
     try {
-      const [courseRes, subjRes, lectRes, semRes] = await Promise.all([
-        courseApi.getPaginated(currentPage, pageSize, courseCodeSearch),
-        subjectApi.getAll(),
-        lecturerApi.getAll(),
+      const targetSemId = semId !== undefined ? semId : filterSemesterId;
+      const [courseRes, semRes] = await Promise.all([
+        courseApi.getPaginated(
+          currentPage,
+          pageSize,
+          courseCodeSearch !== undefined ? courseCodeSearch : searchCourseCode,
+          targetSemId ? Number(targetSemId) : undefined
+        ),
         semesterApi.getAll(),
       ]);
 
@@ -346,20 +388,6 @@ const Courses: React.FC = () => {
 
       setCourses(mappedCourses);
 
-      // Map subjects
-      const mappedSubjects = subjRes.data.map((s: any) => ({
-        id: s.id,
-        name: s.name,
-      }));
-      setSubjects(mappedSubjects);
-
-      // Map lecturers
-      const mappedLecturers = lectRes.data.map((l: any) => ({
-        id: l.id,
-        fullName: l.fullName || l.user?.fullName || "Chưa có tên",
-      }));
-      setLecturers(mappedLecturers);
-
       // Map semesters
       const mappedSemesters = semRes.data.map((s: any) => ({
         id: s.id,
@@ -368,21 +396,24 @@ const Courses: React.FC = () => {
       setSemesters(mappedSemesters);
     } catch (err: any) {
       console.error(err);
-      setError("Không thể tải dữ liệu lớp học phần, môn học hoặc giảng viên.");
+      setError("Không thể tải dữ liệu lớp học phần hoặc học kỳ.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(searchCourseCode, filterSemesterId);
   }, [currentPage, pageSize]);
 
   const openCreateModal = () => {
     setModalType("create");
     setCourseCode("");
     setMaxStudents(50);
-    setSubjectId(subjects[0]?.id.toString() || "");
+    setSubjectId("");
+    setSubjectSearchText("");
+    setSubjectSuggestions([]);
+    setShowSuggestions(false);
     setLecturerId(lecturers[0]?.id.toString() || "");
     setSemesterId(semesters[0]?.id.toString() || "");
     setStatus("PLANNED");
@@ -393,6 +424,7 @@ const Courses: React.FC = () => {
     setSelectedId(null);
     setIsModalOpen(true);
     setError("");
+    fetchLecturers();
   };
 
   const openEditModal = (course: Course) => {
@@ -400,6 +432,9 @@ const Courses: React.FC = () => {
     setCourseCode(course.courseCode);
     setMaxStudents(course.maxStudents);
     setSubjectId(course.subjectId?.toString() || "");
+    setSubjectSearchText(course.subjectName || "");
+    setSubjectSuggestions([]);
+    setShowSuggestions(false);
     setLecturerId(course.lecturerId?.toString() || "");
     setSemesterId(course.semesterId?.toString() || "");
     setStatus(course.status || "PLANNED");
@@ -410,6 +445,7 @@ const Courses: React.FC = () => {
     setSelectedId(course.id);
     setIsModalOpen(true);
     setError("");
+    fetchLecturers();
   };
 
   const handleCloseModal = () => {
@@ -540,7 +576,7 @@ const Courses: React.FC = () => {
             <button
               className="btn"
               style={{ backgroundColor: "#10b981", color: "white", display: "flex", alignItems: "center", gap: "6px", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: 500, cursor: "pointer" }}
-              onClick={handleGenerateCourses}
+              onClick={() => openActionModal("generate")}
               disabled={loading || isGenerating || isScheduling}
             >
               <Zap size={18} />
@@ -549,16 +585,16 @@ const Courses: React.FC = () => {
             <button
               className="btn"
               style={{ backgroundColor: "#6366f1", color: "white", display: "flex", alignItems: "center", gap: "6px", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: 500, cursor: "pointer" }}
-              onClick={handleScheduleCourses}
+              onClick={() => openActionModal("schedule")}
               disabled={loading || isGenerating || isScheduling || isExporting}
             >
               <Calendar size={18} />
-              <span>{isScheduling ? 'Đang xếp TKB...' : 'Xếp TKB (OR-Tools)'}</span>
+              <span>{isScheduling ? 'Đang xếp TKB...' : 'Xếp TKB'}</span>
             </button>
             <button
               className="btn"
               style={{ backgroundColor: "#f59e0b", color: "white", display: "flex", alignItems: "center", gap: "6px", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: 500, cursor: "pointer" }}
-              onClick={handleExportExcel}
+              onClick={() => openActionModal("export")}
               disabled={loading || isGenerating || isScheduling || isExporting}
             >
               <Download size={18} />
@@ -575,31 +611,60 @@ const Courses: React.FC = () => {
           </div>
         </div>
 
-        {/* Search Bar for Courses */}
-        <div style={{ marginBottom: "1.5rem", display: "flex", gap: "10px" }}>
+        {/* Filter and Search Bar for Courses */}
+        <div style={{ marginBottom: "1.5rem", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+          <select
+            className="form-control"
+            value={filterSemesterId}
+            onChange={(e) => {
+              setFilterSemesterId(e.target.value);
+              setCurrentPage(0);
+              fetchData(searchCourseCode, e.target.value);
+            }}
+            style={{ maxWidth: "220px", fontWeight: 500 }}
+          >
+            <option value="">-- Tất cả học kỳ --</option>
+            {semesters.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+
           <input
             type="text"
             className="form-control"
-            placeholder="Tìm kiếm theo mã lớp học phần..."
+            placeholder="Tìm kiếm theo mã lớp hoặc tên môn..."
             value={searchCourseCode}
             onChange={(e) => setSearchCourseCode(e.target.value)}
-            style={{ maxWidth: "300px" }}
+            style={{ maxWidth: "280px" }}
             onKeyDown={(e) => {
-              if (e.key === "Enter") fetchData(searchCourseCode);
+              if (e.key === "Enter") {
+                setCurrentPage(0);
+                fetchData(searchCourseCode, filterSemesterId);
+              }
             }}
           />
-          <button className="btn btn-secondary" onClick={() => fetchData(searchCourseCode)}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setCurrentPage(0);
+              fetchData(searchCourseCode, filterSemesterId);
+            }}
+          >
             Tìm kiếm
           </button>
-          {searchCourseCode && (
+          {(searchCourseCode || filterSemesterId) && (
             <button
               className="btn btn-secondary"
               onClick={() => {
                 setSearchCourseCode("");
-                fetchData("");
+                setFilterSemesterId("");
+                setCurrentPage(0);
+                fetchData("", "");
               }}
             >
-              Hủy tìm
+              Đặt lại
             </button>
           )}
         </div>
@@ -832,23 +897,89 @@ const Courses: React.FC = () => {
                     />
                   </div>
 
-                  <div className="form-group">
+                  <div className="form-group" style={{ position: "relative" }}>
                     <label className="form-label">
                       Môn Học <span style={{ color: "var(--danger)" }}>*</span>
                     </label>
-                    <select
+                    <input
+                      type="text"
                       className="form-control"
-                      value={subjectId}
-                      onChange={(e) => setSubjectId(e.target.value)}
-                      required
-                    >
-                      <option value="">-- Chọn môn học --</option>
-                      {subjects.map((subject) => (
-                        <option key={subject.id} value={subject.id}>
-                          {subject.name}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Gõ mã hoặc tên môn học để tìm kiếm..."
+                      value={subjectSearchText}
+                      onChange={(e) => {
+                        setSubjectSearchText(e.target.value);
+                        setSubjectId("");
+                        setShowSuggestions(true);
+                      }}
+                      onFocus={() => {
+                        setShowSuggestions(true);
+                      }}
+                      onBlur={() => {
+                        setTimeout(() => setShowSuggestions(false), 200);
+                      }}
+                      required={!subjectId}
+                    />
+                    {isSearchingSubject && (
+                      <span style={{ position: "absolute", right: "12px", top: "38px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                        Đang tìm...
+                      </span>
+                    )}
+                    {showSuggestions && (
+                      <div
+                        className="autocomplete-dropdown"
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          right: 0,
+                          maxHeight: "220px",
+                          overflowY: "auto",
+                          backgroundColor: "var(--card-bg)",
+                          border: "1px solid var(--card-border)",
+                          borderRadius: "var(--radius-md)",
+                          zIndex: 1000,
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                          marginTop: "4px",
+                        }}
+                      >
+                        {subjectSuggestions.length === 0 ? (
+                          <div style={{ padding: "10px 14px", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+                            {isSearchingSubject ? "Đang tìm kiếm..." : "Không tìm thấy môn học phù hợp"}
+                          </div>
+                        ) : (
+                          subjectSuggestions.map((s: any) => (
+                            <div
+                              key={s.id}
+                              onClick={() => {
+                                setSubjectId(s.id.toString());
+                                setSubjectSearchText(`${s.subjectCode} - ${s.name}`);
+                                setShowSuggestions(false);
+                              }}
+                              style={{
+                                padding: "10px 14px",
+                                cursor: "pointer",
+                                borderBottom: "1px solid var(--card-border)",
+                                fontSize: "0.9rem",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                transition: "background-color 0.2s",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)")}
+                              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                            >
+                              <span style={{ fontWeight: 500, color: "var(--primary)" }}>{s.subjectCode}</span>
+                              <span style={{ color: "var(--text-primary)" }}>{s.name}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                    {subjectId && (
+                      <small style={{ color: "var(--success)", fontSize: "0.85rem", marginTop: "4px", display: "block" }}>
+                        ✓ Đã chọn môn học (ID: {subjectId})
+                      </small>
+                    )}
                   </div>
 
                   <div className="form-group">
@@ -1186,6 +1317,119 @@ const Courses: React.FC = () => {
                     })()}
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Custom Action Modal (Generate Courses, Schedule TKB, Export Excel) */}
+        {actionModal.isOpen && (
+          <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: "480px" }}>
+              <div className="modal-header">
+                <h3 className="modal-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  {actionModal.type === "generate" && <Zap size={22} style={{ color: "#10b981" }} />}
+                  {actionModal.type === "schedule" && <Calendar size={22} style={{ color: "#6366f1" }} />}
+                  {actionModal.type === "export" && <Download size={22} style={{ color: "#f59e0b" }} />}
+                  <span>
+                    {actionModal.type === "generate" && "Tự Động Sinh Lớp Học Phần"}
+                    {actionModal.type === "schedule" && "Tự Động Xếp Thời Khóa Biểu"}
+                    {actionModal.type === "export" && "Xuất Excel Thời Khóa Biểu"}
+                  </span>
+                </h3>
+                <button
+                  className="modal-close"
+                  onClick={() => setActionModal({ ...actionModal, isOpen: false })}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="modal-body" style={{ textAlign: "left" }}>
+                <p style={{ color: "var(--text-main)", lineHeight: "1.5", marginBottom: "1.25rem" }}>
+                  {actionModal.type === "generate" &&
+                    "Hệ thống sẽ phân tích dữ liệu đăng ký nguyện vọng của sinh viên để tự động tạo ra các lớp học phần tương ứng cho học kỳ được chọn."}
+                  {actionModal.type === "schedule" &&
+                    "Hệ thống sẽ chạy thuật toán tối ưu hóa Google OR-Tools (CP-SAT) để tự động xếp lịch học, phòng học và ca học cho các lớp ở trạng thái Chuẩn Bị Mở (PLANNED)."}
+                  {actionModal.type === "export" &&
+                    "Tải xuống báo cáo bảng tính Excel chi tiết toàn bộ lịch học và thời khóa biểu của học kỳ được chọn."}
+                </p>
+
+                <div className="form-group" style={{ marginBottom: "1.25rem" }}>
+                  <label className="form-label" style={{ fontWeight: 600, display: "block", marginBottom: "6px" }}>
+                    Chọn Học Kỳ Áp Dụng:
+                  </label>
+                  <select
+                    className="form-control"
+                    value={actionModal.semesterId}
+                    onChange={(e) => setActionModal({ ...actionModal, semesterId: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", fontSize: "0.95rem" }}
+                  >
+                    {semesters.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {actionModal.type !== "export" && (
+                  <div
+                    style={{
+                      padding: "12px",
+                      backgroundColor: "#fff8e1",
+                      borderLeft: "4px solid #f59e0b",
+                      borderRadius: "4px",
+                      fontSize: "0.85rem",
+                      color: "#b78103",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "8px",
+                    }}
+                  >
+                    <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: "2px" }} />
+                    <span>
+                      <strong>Lưu ý:</strong> Quá trình xử lý dữ liệu và thuật toán tối ưu có thể mất từ vài giây đến một phút. Vui lòng không đóng tab hoặc làm mới trang trong quá trình thực hiện!
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "1rem" }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setActionModal({ ...actionModal, isOpen: false })}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{
+                    backgroundColor:
+                      actionModal.type === "generate"
+                        ? "#10b981"
+                        : actionModal.type === "schedule"
+                          ? "#6366f1"
+                          : "#f59e0b",
+                    color: "white",
+                    border: "none",
+                    padding: "8px 18px",
+                    borderRadius: "8px",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                  onClick={confirmActionModal}
+                >
+                  {actionModal.type === "generate" && <Zap size={16} />}
+                  {actionModal.type === "schedule" && <Calendar size={16} />}
+                  {actionModal.type === "export" && <Download size={16} />}
+                  <span>Xác nhận thực hiện</span>
+                </button>
               </div>
             </div>
           </div>

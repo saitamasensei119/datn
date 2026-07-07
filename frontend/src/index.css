@@ -326,7 +326,7 @@ body {
 /* Glassmorphism Cards */
 .glass-card {
   background: var(--card-bg);
-  backdrop-filter: var(--glass-filter);
+  /* backdrop-filter: var(--glass-filter); */
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   padding: 2rem;
@@ -575,7 +575,7 @@ select.form-control {
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  /* backdrop-filter: blur(4px); */
   display: flex;
   align-items: center;
   justify-content: center;

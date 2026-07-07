@@ -165,14 +165,10 @@ public class CourseService {
                 .toList();
     }
 
-    public Page<CourseResponse> getPaginatedAdminCourses(int page, int size, String search) {
+    public Page<CourseResponse> getPaginatedAdminCourses(int page, int size, String search, Long semesterId) {
         Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
-        Page<Course> coursePage;
-        if (search != null && !search.trim().isEmpty()) {
-            coursePage = courseRepository.findByCourseCodeContainingIgnoreCaseOrSubject_NameContainingIgnoreCase(search.trim(), search.trim(), pageable);
-        } else {
-            coursePage = courseRepository.findAll(pageable);
-        }
+        String searchParam = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        Page<Course> coursePage = courseRepository.findPaginated(semesterId, searchParam, pageable);
         return coursePage.map(this::mapToResponse);
     }
 

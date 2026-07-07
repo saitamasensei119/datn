@@ -53,6 +53,8 @@ export const departmentApi = {
 
 export const subjectApi = {
   getAll: () => api.get("/api/subjects"),
+  searchSimple: (keyword: string, limit: number = 15) =>
+    api.get("/api/subjects/simple-search", { params: { keyword, limit } }),
   getPaginated: (page: number, size: number, search?: string) =>
     api.get("/api/subjects/page", { params: { page, size, search } }),
   getById: (id: number) => api.get(`/api/subjects/${id}`),
@@ -97,14 +99,16 @@ export const studentApi = {
   create: (data: any) => api.post("/api/admin/students", data),
   update: (id: number, data: any) => api.put(`/api/admin/students/${id}`, data),
   getAll: () => api.get("/api/admin/students"),
+  getPaginated: (page: number, size: number, search?: string) =>
+    api.get("/api/admin/students/page", { params: { page, size, search } }),
   changeStatus: (id: number, status: string) =>
     api.put(`/api/admin/students/${id}`, { status }),
 };
 
 export const courseApi = {
   getAll: () => api.get("/api/admin/courses"),
-  getPaginated: (page: number, size: number, search?: string) =>
-    api.get("/api/admin/courses/page", { params: { page, size, search } }),
+  getPaginated: (page: number, size: number, search?: string, semesterId?: number) =>
+    api.get("/api/admin/courses/page", { params: { page, size, search, semesterId: semesterId ? semesterId : undefined } }),
   getById: (id: number) => api.get(`/api/admin/courses/${id}`),
   create: (data: any) => api.post("/api/admin/courses", data),
   update: (id: number, data: any) => api.put(`/api/admin/courses/${id}`, data),
@@ -204,6 +208,10 @@ export const studentGradeApi = {
 export const studentAttendanceApi = {
   getSummary: () => api.get(`/api/student/attendance/summary`),
   getDetails: (courseId: number) => api.get(`/api/student/attendance/courses/${courseId}`),
+};
+
+export const adminDashboardApi = {
+  getOverview: () => api.get("/api/admin/dashboard/overview"),
 };
 
 export const studentDashboardApi = {

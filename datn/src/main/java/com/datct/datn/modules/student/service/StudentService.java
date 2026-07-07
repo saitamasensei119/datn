@@ -193,6 +193,12 @@ public class StudentService {
                 .toList();
     }
 
+    public org.springframework.data.domain.Page<StudentResponse> getPaginated(int page, int size, String search) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by("id").descending());
+        org.springframework.data.domain.Page<Student> studentPage = studentRepository.findPaginated(search != null ? search : "", pageable);
+        return studentPage.map(this::mapToResponse);
+    }
+
     @Transactional
     public StudentResponse updateMyProfile(
             StudentRequest request

@@ -28,4 +28,7 @@ public interface SubjectRepository
             String name,
             Pageable pageable
     );
+
+    @org.springframework.data.jpa.repository.Query("SELECT new com.datct.datn.modules.subject.DTO.SubjectSimpleResponse(s.id, s.subjectCode, s.name) FROM Subject s WHERE LOWER(s.subjectCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    java.util.List<com.datct.datn.modules.subject.DTO.SubjectSimpleResponse> searchSimple(@org.springframework.data.repository.query.Param("keyword") String keyword, Pageable pageable);
 }
