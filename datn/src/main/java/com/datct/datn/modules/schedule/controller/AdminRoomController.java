@@ -7,7 +7,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.Page;
+import org.springframework.web.multipart.MultipartFile;
+
 @RestController
 @RequestMapping("/api/admin/rooms")
 @RequiredArgsConstructor
@@ -39,5 +42,10 @@ public class AdminRoomController {
     @DeleteMapping("/{id}")
     public void deleteRoom(@PathVariable Long id) {
         roomService.deleteRoom(id);
+    }
+
+    @PostMapping("/import")
+    public Map<String, Object> importRooms(@RequestParam("file") MultipartFile file) {
+        return roomService.importExcel(file);
     }
 }

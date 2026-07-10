@@ -21,12 +21,13 @@ const Login: React.FC = () => {
 
     try {
       const response = await authApi.login({ email, password });
-      const { token } = response.data;
+      const { accessToken, token, refreshToken } = response.data;
+      const finalToken = accessToken || token;
       
-      login(token);
+      login(finalToken, refreshToken);
       
       // Decode locally to check the role and redirect
-      const base64Url = token.split('.')[1];
+      const base64Url = finalToken.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const decoded = JSON.parse(window.atob(base64));
       const role = decoded.role.replace('ROLE_', '');

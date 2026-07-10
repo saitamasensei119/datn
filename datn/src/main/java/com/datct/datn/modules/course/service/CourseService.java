@@ -14,6 +14,8 @@ import com.datct.datn.modules.grade.entity.GradeSubmission;
 import com.datct.datn.modules.grade.repository.GradeSubmissionRepository;
 import com.datct.datn.modules.enrollment.repository.EnrollmentRepository;
 import com.datct.datn.modules.lecturer.entity.Lecturer;
+import com.datct.datn.modules.timetable.DTO.ClassScheduleResponse;
+import com.datct.datn.modules.timetable.repository.ClassScheduleRepository;
 import com.datct.datn.modules.lecturer.repository.LecturerRepository;
 import com.datct.datn.modules.student.DTO.StudentResponse;
 import com.datct.datn.modules.student.entity.Student;
@@ -43,6 +45,7 @@ public class CourseService {
     private final SemesterRepository semesterRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final GradeSubmissionRepository gradeSubmissionRepository;
+    private final ClassScheduleRepository classScheduleRepository;
 
     public CourseResponse create(
             CreateCourseRequest request
@@ -406,6 +409,19 @@ public class CourseService {
     private CourseResponse mapToResponse(
             Course course
     ) {
+        List<ClassScheduleResponse> scheduleResponses = classScheduleRepository.findByCourseId(course.getId()).stream()
+                .map(cs -> new ClassScheduleResponse(
+                        cs.getId(),
+                        cs.getSessionNumber(),
+                        cs.getDayOfWeek(),
+                        cs.getStartPeriod(),
+                        cs.getEndPeriod(),
+                        cs.getShift(),
+                        cs.getTimeString(),
+                        cs.getWeekPattern(),
+                        cs.getRoom() != null ? cs.getRoom().getRoomName() : null
+                ))
+                .toList();
 
         return new CourseResponse(
                 course.getId(),
@@ -425,7 +441,8 @@ public class CourseService {
                 course.getAttachedCourseCode(),
                 course.getNote(),
                 course.getOpeningBatch(),
-                course.getGradeComponent() != null ? course.getGradeComponent().getMidtermWeight() : null
+                course.getGradeComponent() != null ? course.getGradeComponent().getMidtermWeight() : null,
+                scheduleResponses
         );
     }
 }

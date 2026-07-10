@@ -2,6 +2,8 @@ package com.datct.datn.modules.enrollment.service;
 
 import com.datct.datn.auth.CustomUserDetails;
 import com.datct.datn.modules.course.DTO.StudentCourseResponse;
+import com.datct.datn.modules.timetable.DTO.ClassScheduleResponse;
+import com.datct.datn.modules.timetable.repository.ClassScheduleRepository;
 import com.datct.datn.modules.course.entity.Course;
 import com.datct.datn.modules.course.entity.CourseStatus;
 import com.datct.datn.modules.course.repository.CourseRepository;
@@ -34,6 +36,7 @@ public class EnrollmentService {
     private final CourseRepository courseRepository;
     private final SubjectConditionRepository subjectConditionRepository;
     private final StudentSubjectResultRepository studentSubjectResultRepository;
+    private final ClassScheduleRepository classScheduleRepository;
 
     @Transactional
     public void enroll(EnrollmentRequest request) {
@@ -233,15 +236,29 @@ public class EnrollmentService {
                         );
 
         return courses.stream()
-                .map(course ->
-                        new StudentCourseResponse(
-                                course.getId(),
-                                course.getCourseCode(),
-                                course.getSubject().getName(),
-                                course.getMaxStudents(),
-                                course.getStatus()
-                        )
-                )
+                .map(course -> {
+                    List<ClassScheduleResponse> schedules = classScheduleRepository.findByCourseId(course.getId()).stream()
+                            .map(cs -> new ClassScheduleResponse(
+                                    cs.getId(),
+                                    cs.getSessionNumber(),
+                                    cs.getDayOfWeek(),
+                                    cs.getStartPeriod(),
+                                    cs.getEndPeriod(),
+                                    cs.getShift(),
+                                    cs.getTimeString(),
+                                    cs.getWeekPattern(),
+                                    cs.getRoom() != null ? cs.getRoom().getRoomName() : null
+                            ))
+                            .toList();
+                    return new StudentCourseResponse(
+                            course.getId(),
+                            course.getCourseCode(),
+                            course.getSubject().getName(),
+                            course.getMaxStudents(),
+                            course.getStatus(),
+                            schedules
+                    );
+                })
                 .toList();
     }
 

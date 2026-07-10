@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import ProfileModal from "./ProfileModal";
 import {
   BookOpen,
   Building2,
@@ -40,7 +41,8 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, _setSidebarOpen] = useState(true);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
     const savedTheme =
@@ -149,8 +151,27 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <h1 className="page-title">{getHeaderTitle()}</h1>
           </div>
           <div className="header-right">
-            <div className="user-info">
-              <span className="user-name">{user.email}</span>
+            <div
+              className="user-profile-badge"
+              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "0.5rem" }}
+              onClick={() => setIsProfileOpen(true)}
+              title="Cài đặt tài khoản / Đổi mật khẩu & Avatar"
+            >
+              <div className="avatar">
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt="Avatar"
+                    style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                    onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
+                  />
+                ) : (
+                  user.email.charAt(0).toUpperCase()
+                )}
+              </div>
+              <span className="user-name" style={{ maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {user.email}
+              </span>
               <span className="badge badge-danger">ADMIN</span>
             </div>
           </div>
@@ -158,6 +179,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
         {/* Content Area */}
         <div className="content-area">{children}</div>
+        <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
       </main>
     </div>
   );

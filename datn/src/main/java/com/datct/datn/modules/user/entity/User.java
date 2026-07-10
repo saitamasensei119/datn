@@ -34,8 +34,20 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    @Column(name = "avatar", length = 1000)
+    private String avatar;
+
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     private Boolean enabled = true;
+
+    @Column(name = "failed_login_attempts")
+    private Integer failedLoginAttempts = 0;
+
+    @Column(name = "account_locked_until")
+    private LocalDateTime accountLockedUntil;
+
+    @Column(name = "last_password_reset_date")
+    private LocalDateTime lastPasswordResetDate;
 }

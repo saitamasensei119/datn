@@ -12,4 +12,5 @@ import lombok.Setter;
 public class RoomRequest {
     private String roomName;
     private Integer capacity;
+    private String building;
 }

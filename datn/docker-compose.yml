@@ -1,0 +1,15 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: datn-backend
+    ports:
+      - "8080:8080"
+    environment:
+      # Tự động trỏ kết nối DB và RabbitMQ về máy Host Windows thông qua host.docker.internal
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/DATN
+      - SPRING_RABBITMQ_HOST=host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

@@ -14,12 +14,14 @@ public class RoomResponse {
     private Long id;
     private String roomName;
     private Integer capacity;
+    private String building;
 
     public static RoomResponse fromEntity(Room room) {
         return new RoomResponse(
                 room.getId(),
                 room.getRoomName(),
-                room.getCapacity()
+                room.getCapacity(),
+                room.getBuilding()
         );
     }
 }

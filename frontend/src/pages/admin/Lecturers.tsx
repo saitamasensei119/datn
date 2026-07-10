@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { lecturerApi, departmentApi } from "../../services/api";
-import { Plus, Edit2, Trash2, X, AlertTriangle, Key } from "lucide-react";
+import { Plus, Edit2, X, AlertTriangle } from "lucide-react";
 import AdminLayout from "../../components/AdminLayout";
 interface Department {
   id: number;

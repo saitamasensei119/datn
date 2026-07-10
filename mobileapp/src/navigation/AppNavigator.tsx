@@ -12,6 +12,7 @@ import { ActivityIndicator, View } from "react-native";
 
 import CoursesScreen from "../screens/CoursesScreen";
 import GradesScreen from "../screens/GradesScreen";
+import TimetableScreen from "../screens/TimetableScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -27,6 +28,8 @@ function MainTabs() {
             iconName = focused ? "home" : "home-outline";
           } else if (route.name === "Courses") {
             iconName = focused ? "book" : "book-outline";
+          } else if (route.name === "Timetable") {
+            iconName = focused ? "calendar" : "calendar-outline";
           } else if (route.name === "Grades") {
             iconName = focused ? "ribbon" : "ribbon-outline";
           } else if (route.name === "Profile") {
@@ -45,6 +48,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: "Trang chủ" }} />
       <Tab.Screen name="Courses" component={CoursesScreen} options={{ title: "Lớp học" }} />
+      <Tab.Screen name="Timetable" component={TimetableScreen} options={{ title: "Lịch học" }} />
       <Tab.Screen name="Grades" component={GradesScreen} options={{ title: "Điểm số" }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: "Tài khoản" }} />
     </Tab.Navigator>

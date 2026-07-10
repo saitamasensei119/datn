@@ -64,5 +64,14 @@ public class TimetableDTOs {
         private Integer coursesGenerated;
         private Integer schedulesCreated;
         private Double penaltyScore;
+        private Double executionTimeSeconds;
+
+        public TimetableResponse(String message, Integer coursesGenerated, Integer schedulesCreated, Double penaltyScore) {
+            this.message = message;
+            this.coursesGenerated = coursesGenerated;
+            this.schedulesCreated = schedulesCreated;
+            this.penaltyScore = penaltyScore;
+            this.executionTimeSeconds = 0.0;
+        }
     }
 }

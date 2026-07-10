@@ -9,17 +9,15 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-public class LoginResponse {
+public class TokenRefreshResponse {
 
     private String accessToken;
     private String refreshToken;
     private String tokenType = "Bearer";
-    private String token; // alias of accessToken for backward compatibility
 
-    public LoginResponse(String accessToken, String refreshToken) {
+    public TokenRefreshResponse(String accessToken, String refreshToken) {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
-        this.token = accessToken;
         this.tokenType = "Bearer";
     }
 }

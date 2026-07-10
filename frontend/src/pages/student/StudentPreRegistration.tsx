@@ -38,7 +38,7 @@ const StudentPreRegistration: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, _setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
 
   const [loading, setLoading] = useState(false);

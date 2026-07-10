@@ -8,6 +8,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Entity
 @Table(name = "courses")
 @Getter
@@ -57,4 +59,7 @@ public class Course {
 
     @OneToOne(mappedBy = "course", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private com.datct.datn.modules.grade.entity.GradeComponent gradeComponent;
+
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<com.datct.datn.modules.timetable.entity.ClassSchedule> classSchedules;
 }

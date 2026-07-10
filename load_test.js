@@ -29,15 +29,15 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function runTsunamiTest() {
   const modeName = MODE === 'new' ? 'KIẾN TRÚC MỚI (RabbitMQ + Lock)' : 'KIẾN TRÚC CŨ (Monolith Sync)';
   console.log(`=============================================================`);
-  console.log(`🌊 BẮT ĐẦU KỊCH BẢN TSUNAMI FLOOD: ${modeName}`);
-  console.log(`🎯 Mục tiêu: ${TOTAL_REQUESTS} requests dồn dập không nghỉ vào Lớp ID = ${COURSE_ID}`);
+  // console.log(`🌊 BẮT ĐẦU KỊCH BẢN TSUNAMI FLOOD: ${modeName}`);
+  // console.log(`🎯 Mục tiêu: ${TOTAL_REQUESTS} requests dồn dập không nghỉ vào Lớp ID = ${COURSE_ID}`);
   console.log(`=============================================================\n`);
 
   const startTime = Date.now();
   const allPromises = [];
   const CHUNK_SIZE = 250; // Mỗi 20ms nhả 250 TCP Sockets vào OS
 
-  console.log(`🚀 Đang xả lũ ${TOTAL_REQUESTS} requests vào máy chủ...`);
+  // console.log(`🚀 Đang xả lũ ${TOTAL_REQUESTS} requests vào máy chủ...`);
 
   for (let i = 1; i <= TOTAL_REQUESTS; i += CHUNK_SIZE) {
     const chunkCount = Math.min(CHUNK_SIZE, TOTAL_REQUESTS - i + 1);
@@ -49,7 +49,7 @@ async function runTsunamiTest() {
     await sleep(20); 
   }
 
-  console.log(`💥 Đã xả xong toàn bộ sockets trong ${Date.now() - startTime} ms! Đang đợi máy chủ gồng mình xử lý...`);
+  // console.log(`💥 Đã xả xong toàn bộ sockets trong ${Date.now() - startTime} ms! Đang đợi máy chủ gồng mình xử lý...`);
 
   const results = await Promise.all(allPromises);
   const duration = Date.now() - startTime;
@@ -64,8 +64,8 @@ async function runTsunamiTest() {
     else errorCount++;
   });
 
-  console.log(`\n📊 --- KẾT QUẢ xẢ LŨ ${TOTAL_REQUESTS} REQUESTS ---`);
-  console.log(`⏱️ Tổng thời gian chịu đựng: ${duration} ms (~${ (duration/1000).toFixed(2) } giây)`);
+  console.log(`\n📊 --- ${TOTAL_REQUESTS} REQUESTS ---`);
+  console.log(`⏱️ Tổng thời gian : ${duration} ms (~${ (duration/1000).toFixed(2) } giây)`);
   console.log(`✅ Thành Công (HTTP 200/202): ${successCount}`);
   console.log(`❌ Từ chối bình thường (DB Full hoặc hết sĩ số): ${errorCount}`);
   console.log(`🔥 SẬP SERVER (Lỗi 500/504 / Connection Pool Timeout): ${timeoutCount}`);

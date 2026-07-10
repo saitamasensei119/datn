@@ -46,11 +46,6 @@ public class UserService {
 
         userRepository.save(user);
 
-        return new UserResponse(
-                user.getId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getRole()
-        );
+        return UserResponse.fromEntity(user);
     }
 }

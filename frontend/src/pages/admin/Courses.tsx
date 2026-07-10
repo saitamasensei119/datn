@@ -38,6 +38,17 @@ interface Semester {
   name: string;
 }
 
+interface ClassSchedule {
+  id: number;
+  sessionNumber: number;
+  dayOfWeek: number;
+  startPeriod: number;
+  endPeriod: number;
+  shift?: string;
+  timeString?: string;
+  roomName?: string;
+}
+
 interface Course {
   id: number;
   courseCode: string;
@@ -53,6 +64,7 @@ interface Course {
   status?: string;
   openingBatch?: string;
   midtermWeight?: number;
+  schedules?: ClassSchedule[];
 }
 
 const getStatusBadge = (status: string | undefined) => {
@@ -73,7 +85,7 @@ const getStatusBadge = (status: string | undefined) => {
 
 const Courses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [_subjects, _setSubjects] = useState<Subject[]>([]);
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +98,7 @@ const Courses: React.FC = () => {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, _setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [filterSemesterId, setFilterSemesterId] = useState<string>("");
@@ -315,7 +327,8 @@ const Courses: React.FC = () => {
       setSuccess("");
       try {
         const res = await timetableApi.scheduleCourses(targetSemesterId);
-        setSuccess(`${res.data.message} (Đã xếp: ${res.data.schedulesCreated} lịch học)`);
+        const timeStr = res.data.executionTimeSeconds ? ` | Thời gian giải: ${res.data.executionTimeSeconds}s` : "";
+        setSuccess(`${res.data.message} (Đã xếp: ${res.data.schedulesCreated} lịch học${timeStr})`);
         setTimeout(() => setSuccess(""), 5000);
         fetchData(searchCourseCode);
       } catch (err: any) {
@@ -384,6 +397,7 @@ const Courses: React.FC = () => {
         note: course.note || "",
         openingBatch: course.openingBatch || "",
         midtermWeight: course.midtermWeight,
+        schedules: course.schedules || [],
       }));
 
       setCourses(mappedCourses);
@@ -711,6 +725,7 @@ const Courses: React.FC = () => {
                   <th>Học Kỳ</th>
                   <th style={{ width: "80px", textAlign: "center" }}>Đợt mở</th>
                   <th>Mã lớp kèm</th>
+                  <th>Lịch & Phòng</th>
                   <th style={{ width: "80px", textAlign: "center" }}>Sĩ Số</th>
                   <th style={{ width: "100px", textAlign: "center" }}>
                     Trạng Thái
@@ -735,6 +750,26 @@ const Courses: React.FC = () => {
                       </span>
                     </td>
                     <td style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>{course.attachedCourseCode || "Không"}</td>
+                    <td style={{ fontSize: "0.85rem", minWidth: "180px" }}>
+                      {course.schedules && course.schedules.length > 0 ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                          {course.schedules.map((s, idx) => (
+                            <div key={idx} style={{ 
+                              padding: "4px 8px", 
+                              borderRadius: "6px", 
+                              backgroundColor: "rgba(99, 102, 241, 0.15)", 
+                              border: "1px solid rgba(99, 102, 241, 0.3)",
+                              color: "var(--text-main)"
+                            }}>
+                              <div style={{ fontWeight: 600, color: "var(--primary)" }}>Thứ {s.dayOfWeek}: {s.timeString || `Tiết ${s.startPeriod}-${s.endPeriod}`}</div>
+                              <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Phòng: <span style={{ fontWeight: 600, color: "#10b981" }}>{s.roomName || "Chưa gán"}</span></div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>Chưa có lịch</span>
+                      )}
+                    </td>
                     <td style={{ textAlign: "center" }}>
                       {course.maxStudents}
                     </td>
@@ -1350,7 +1385,7 @@ const Courses: React.FC = () => {
                   {actionModal.type === "generate" &&
                     "Hệ thống sẽ phân tích dữ liệu đăng ký nguyện vọng của sinh viên để tự động tạo ra các lớp học phần tương ứng cho học kỳ được chọn."}
                   {actionModal.type === "schedule" &&
-                    "Hệ thống sẽ chạy thuật toán tối ưu hóa Google OR-Tools (CP-SAT) để tự động xếp lịch học, phòng học và ca học cho các lớp ở trạng thái Chuẩn Bị Mở (PLANNED)."}
+                    "Hệ thống sẽ chạy thuật toán để tự động xếp lịch học, phòng học và ca học cho các lớp ở trạng thái Chuẩn Bị Mở (PLANNED)."}
                   {actionModal.type === "export" &&
                     "Tải xuống báo cáo bảng tính Excel chi tiết toàn bộ lịch học và thời khóa biểu của học kỳ được chọn."}
                 </p>

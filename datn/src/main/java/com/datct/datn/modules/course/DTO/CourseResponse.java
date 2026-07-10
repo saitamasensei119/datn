@@ -3,10 +3,14 @@ package com.datct.datn.modules.course.DTO;
 import com.datct.datn.modules.course.entity.CourseStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
+@NoArgsConstructor
 @AllArgsConstructor
 public class CourseResponse {
 
@@ -37,4 +41,6 @@ public class CourseResponse {
     private String openingBatch;
 
     private Double midtermWeight;
+
+    private List<com.datct.datn.modules.timetable.DTO.ClassScheduleResponse> schedules;
 }

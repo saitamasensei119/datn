@@ -5,7 +5,6 @@ import {
   Users,
   BookOpen,
   GraduationCap,
-  TrendingUp,
   AlertCircle,
 } from "lucide-react";
 import { adminDashboardApi } from "../../services/api";

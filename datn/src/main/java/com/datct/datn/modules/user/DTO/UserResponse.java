@@ -15,4 +15,16 @@ public class UserResponse {
     private String email;
 
     private Role role;
+
+    private String avatar;
+
+    public static UserResponse fromEntity(com.datct.datn.modules.user.entity.User user) {
+        return new UserResponse(
+                user.getId(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getRole(),
+                user.getAvatar()
+        );
+    }
 }

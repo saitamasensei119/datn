@@ -20,7 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -46,10 +48,15 @@ public class DataSeederService {
         Semester semester = semesterRepository.findById(semesterId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ"));
 
-        List<Subject> allSubjects = subjectRepository.findAll();
+        List<Subject> allSubjects = new ArrayList<>(subjectRepository.findAll());
         if (allSubjects.isEmpty()) {
             throw new RuntimeException("Không có môn học nào trong DB để seed.");
         }
+        Collections.shuffle(allSubjects);
+
+        int hotCount = Math.min(20, allSubjects.size());
+        List<Subject> hotSubjects = new ArrayList<>(allSubjects.subList(0, hotCount));
+        List<Subject> regularSubjects = new ArrayList<>(allSubjects.subList(hotCount, allSubjects.size()));
 
         Department department = departmentRepository.findAll().stream().findFirst().orElse(null);
 
@@ -75,20 +82,48 @@ public class DataSeederService {
             student.setDepartment(department);
             studentsToSave.add(student);
 
-            // Randomize subjects
-            List<Subject> shuffledSubjects = new ArrayList<>(allSubjects);
-            Collections.shuffle(shuffledSubjects);
             int subjectsCount = (int) (Math.random() * maxSubjects) + 1;
-            if (subjectsCount > shuffledSubjects.size()) {
-                subjectsCount = shuffledSubjects.size();
+            if (subjectsCount > allSubjects.size()) {
+                subjectsCount = allSubjects.size();
             }
 
-            for (int j = 0; j < subjectsCount; j++) {
-                PreRegistration pr = new PreRegistration();
-                pr.setStudent(student);
-                pr.setSemester(semester);
-                pr.setSubject(shuffledSubjects.get(j));
-                preRegistrationsToSave.add(pr);
+            int targetHotCount = (int) Math.round(subjectsCount * 0.8);
+            if (targetHotCount < 1 && !hotSubjects.isEmpty()) {
+                targetHotCount = 1;
+            }
+            if (targetHotCount > hotSubjects.size()) {
+                targetHotCount = hotSubjects.size();
+            }
+            int targetRegularCount = subjectsCount - targetHotCount;
+            if (targetRegularCount > regularSubjects.size()) {
+                targetRegularCount = regularSubjects.size();
+            }
+
+            Set<Long> pickedSubjectIds = new HashSet<>();
+            List<Subject> shuffledHot = new ArrayList<>(hotSubjects);
+            Collections.shuffle(shuffledHot);
+            for (int j = 0; j < targetHotCount; j++) {
+                Subject s = shuffledHot.get(j);
+                if (pickedSubjectIds.add(s.getId())) {
+                    PreRegistration pr = new PreRegistration();
+                    pr.setStudent(student);
+                    pr.setSemester(semester);
+                    pr.setSubject(s);
+                    preRegistrationsToSave.add(pr);
+                }
+            }
+
+            List<Subject> shuffledRegular = new ArrayList<>(regularSubjects);
+            Collections.shuffle(shuffledRegular);
+            for (int j = 0; j < targetRegularCount; j++) {
+                Subject s = shuffledRegular.get(j);
+                if (pickedSubjectIds.add(s.getId())) {
+                    PreRegistration pr = new PreRegistration();
+                    pr.setStudent(student);
+                    pr.setSemester(semester);
+                    pr.setSubject(s);
+                    preRegistrationsToSave.add(pr);
+                }
             }
         }
 

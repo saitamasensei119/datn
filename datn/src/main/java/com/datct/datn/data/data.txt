@@ -136,9 +136,9 @@ CREATE TABLE courses (
     COMPLETED,    -- kết thúc
     CANCELLED     -- hủy
 
-    opening_batch VARCHAR(2) NOT NULL,
+    opening_batch VARCHAR(2) NOT NULL, --đợt mở
 
-    attached_course_code VARCHAR(50) NOT NULL,
+    attached_course_code VARCHAR(50) NOT NULL, --mã lớp kèm
     note TEXT NOT NULL,
 
     CONSTRAINT fk_courses_subject
@@ -476,4 +476,16 @@ CREATE TABLE pre_registrations (
 
     CONSTRAINT uk_pre_registration
         UNIQUE (student_id, subject_id, semester_id)
+);
+
+-- Tạo bảng refresh_tokens để quản lý Dual Token và cho phép thu hồi (Revoke/Blacklist)
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    token VARCHAR(500) NOT NULL UNIQUE,
+    user_id BIGINT NOT NULL,
+    expiry_date TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    revoked BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

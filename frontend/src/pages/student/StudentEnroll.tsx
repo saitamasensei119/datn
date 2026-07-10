@@ -5,6 +5,17 @@ import { useAuth } from "../../context/AuthContext";
 import { BookMarked, Users, Search } from "lucide-react";
 import "./StudentEnroll.css";
 
+interface ClassSchedule {
+  id: number;
+  sessionNumber: number;
+  dayOfWeek: number;
+  startPeriod: number;
+  endPeriod: number;
+  shift?: string;
+  timeString?: string;
+  roomName?: string;
+}
+
 interface Course {
   id: number;
   courseCode: string;
@@ -14,6 +25,7 @@ interface Course {
   semesterName: string;
   credits?: number;
   studentCount?: number;
+  schedules?: ClassSchedule[];
 }
 
 const StudentEnroll: React.FC = () => {
@@ -262,6 +274,18 @@ const StudentEnroll: React.FC = () => {
                       <p className="info-item">
                         <strong>Tín chỉ:</strong> {course.credits}
                       </p>
+                    )}
+                    {course.schedules && course.schedules.length > 0 && (
+                      <div className="info-item" style={{ marginTop: "8px", padding: "8px", backgroundColor: "rgba(99, 102, 241, 0.08)", borderRadius: "6px", border: "1px dashed rgba(99, 102, 241, 0.3)" }}>
+                        <strong style={{ display: "block", marginBottom: "4px", color: "var(--primary)", fontSize: "0.88rem" }}>Lịch học & Phòng:</strong>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                          {course.schedules.map((s, idx) => (
+                            <div key={idx} style={{ fontSize: "0.84rem", color: "var(--text-main)" }}>
+                              • Thứ {s.dayOfWeek}: <b>{s.timeString || `Tiết ${s.startPeriod}-${s.endPeriod}`}</b> — <span style={{ color: "#10b981", fontWeight: 600 }}>{s.roomName || "Chưa gán P."}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                     <div className="enrollment-status">
                       <Users size={16} />

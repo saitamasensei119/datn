@@ -23,15 +23,84 @@ api.interceptors.request.use(
   },
 );
 
-// Response Interceptor to handle global errors (e.g. 401 Unauthorized)
+// Variables to manage refresh token state across concurrent requests
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// Response Interceptor to handle global errors (e.g. 401 Unauthorized) & Automatic Token Refresh
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      // Clear storage and redirect if token is expired or invalid
-      localStorage.removeItem("token");
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+      if (originalRequest.url?.includes("/auth/login") || originalRequest.url?.includes("/auth/refresh")) {
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        isRefreshing = false;
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
+        return Promise.reject(error);
+      }
+
+      try {
+        const res = await axios.post("/auth/refresh", { refreshToken });
+        const newAccessToken = res.data?.accessToken || res.data?.token;
+        const newRefreshToken = res.data?.refreshToken;
+
+        if (newAccessToken) {
+          localStorage.setItem("token", newAccessToken);
+          if (newRefreshToken) {
+            localStorage.setItem("refreshToken", newRefreshToken);
+          }
+          api.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          processQueue(null, newAccessToken);
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
     return Promise.reject(error);
@@ -41,6 +110,16 @@ api.interceptors.response.use(
 // API Endpoints Mapping
 export const authApi = {
   login: (data: any) => api.post("/auth/login", data),
+  refresh: (refreshToken: string) => api.post("/auth/refresh", { refreshToken }),
+  logout: (refreshToken?: string) => api.post("/auth/logout", { refreshToken }),
+};
+
+export const profileApi = {
+  getMyProfile: () => api.get("/api/profile"),
+  changePassword: (data: { oldPassword: string; newPassword: string; confirmPassword: string }) =>
+    api.put("/api/profile/password", data),
+  changeAvatar: (data: { avatarUrl: string }) =>
+    api.put("/api/profile/avatar", data),
 };
 
 export const departmentApi = {
@@ -224,6 +303,15 @@ export const roomApi = {
   create: (data: any) => api.post("/api/admin/rooms", data),
   update: (id: number, data: any) => api.put(`/api/admin/rooms/${id}`, data),
   delete: (id: number) => api.delete(`/api/admin/rooms/${id}`),
+  importExcel: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post(`/api/admin/rooms/import`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  }
 };
 
 export const timeslotApi = {

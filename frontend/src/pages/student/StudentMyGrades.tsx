@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import StudentLayout from "../../components/StudentLayout";
-import { CheckCircle } from "lucide-react";
 import { studentGradeApi } from "../../services/api";
 import "./StudentMyGrades.css";
 

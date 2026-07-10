@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import AdminLayout from "../../components/AdminLayout";
 import { roomApi, timeslotApi } from "../../services/api";
-import { Building, Clock, Plus, Trash2, Edit, Save, X, RefreshCw } from "lucide-react";
+import { Building, Clock, Trash2, Edit, Save, X, RefreshCw, Upload } from "lucide-react";
 import "./Infrastructure.css";
 
 interface Room {
   id: number;
   roomName: string;
   capacity: number;
+  building?: string;
 }
 
 interface Timeslot {
@@ -26,12 +27,13 @@ const Infrastructure: React.FC = () => {
   
   // States
   const [loading, setLoading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   // Room Form
   const [editingRoomId, setEditingRoomId] = useState<number | null>(null);
-  const [roomFormData, setRoomFormData] = useState({ roomName: "", capacity: 50 });
+  const [roomFormData, setRoomFormData] = useState({ roomName: "", capacity: 50, building: "" });
 
   // Timeslot Form
   const [editingTimeslotId, setEditingTimeslotId] = useState<number | null>(null);
@@ -112,7 +114,7 @@ const Infrastructure: React.FC = () => {
         setSuccess("Thêm phòng học thành công!");
       }
       setEditingRoomId(null);
-      setRoomFormData({ roomName: "", capacity: 50 });
+      setRoomFormData({ roomName: "", capacity: 50, building: "" });
       fetchRooms();
     } catch (err: any) {
       setError(err.response?.data || "Đã xảy ra lỗi khi lưu phòng học.");
@@ -132,12 +134,31 @@ const Infrastructure: React.FC = () => {
 
   const startEditRoom = (room: Room) => {
     setEditingRoomId(room.id);
-    setRoomFormData({ roomName: room.roomName, capacity: room.capacity });
+    setRoomFormData({ roomName: room.roomName, capacity: room.capacity, building: room.building || "" });
   };
 
   const cancelEditRoom = () => {
     setEditingRoomId(null);
-    setRoomFormData({ roomName: "", capacity: 50 });
+    setRoomFormData({ roomName: "", capacity: 50, building: "" });
+  };
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await roomApi.importExcel(file);
+      const data = res.data;
+      setSuccess(`Import thành công! Đã tạo mới ${data.created} phòng, bỏ qua ${data.skipped} phòng trùng/lỗi ${data.errors} dòng.`);
+      fetchRooms();
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Lỗi khi import file Excel.");
+    } finally {
+      setIsImporting(false);
+      if (e.target) e.target.value = "";
+    }
   };
 
   const handleAutoGenerateRooms = async () => {
@@ -275,15 +296,29 @@ const Infrastructure: React.FC = () => {
                   <div className="infra-list glass-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.8rem' }}>
                       <h3 style={{ borderBottom: 'none', margin: 0, paddingBottom: 0 }}>Danh sách Phòng học</h3>
-                      <button className="btn btn-sm btn-secondary" onClick={handleAutoGenerateRooms}>
-                        <RefreshCw size={14} style={{ marginRight: '4px' }} /> Tạo Mẫu
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <label className="btn btn-sm btn-primary" style={{ display: 'flex', alignItems: 'center', cursor: isImporting ? 'not-allowed' : 'pointer', margin: 0 }}>
+                          <Upload size={14} style={{ marginRight: '4px' }} />
+                          <span>{isImporting ? 'Đang Nhập...' : 'Nhập Excel'}</span>
+                          <input
+                            type="file"
+                            accept=".xlsx, .xls"
+                            style={{ display: 'none' }}
+                            onChange={handleImportExcel}
+                            disabled={loading || isImporting}
+                          />
+                        </label>
+                        <button className="btn btn-sm btn-secondary" onClick={handleAutoGenerateRooms} disabled={loading || isImporting}>
+                          <RefreshCw size={14} style={{ marginRight: '4px' }} /> Tạo Mẫu
+                        </button>
+                      </div>
                     </div>
                     <div className="table-responsive">
                       <table className="table">
                         <thead>
                           <tr>
                             <th>ID</th>
+                            <th>Tòa Nhà</th>
                             <th>Tên Phòng</th>
                             <th>Sức Chứa (SV)</th>
                             <th>Thao Tác</th>
@@ -293,6 +328,7 @@ const Infrastructure: React.FC = () => {
                           {rooms.map(room => (
                             <tr key={room.id} className={editingRoomId === room.id ? 'editing-row' : ''}>
                               <td>{room.id}</td>
+                              <td><span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>{room.building || "-"}</span></td>
                               <td>{room.roomName}</td>
                               <td>{room.capacity}</td>
                               <td>
@@ -307,7 +343,7 @@ const Infrastructure: React.FC = () => {
                           ))}
                           {rooms.length === 0 && (
                             <tr>
-                              <td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>Chưa có phòng học nào.</td>
+                              <td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>Chưa có phòng học nào.</td>
                             </tr>
                           )}
                         </tbody>
@@ -332,6 +368,16 @@ const Infrastructure: React.FC = () => {
                   </div>
                   <div className="infra-form glass-card">
                     <h3>{editingRoomId ? 'Sửa Phòng Học' : 'Thêm Phòng Mới'}</h3>
+                    <div className="form-group">
+                      <label>Tòa Nhà</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="VD: TC, D9, B1..."
+                        value={roomFormData.building}
+                        onChange={e => setRoomFormData({...roomFormData, building: e.target.value})}
+                      />
+                    </div>
                     <div className="form-group">
                       <label>Tên Phòng</label>
                       <input 

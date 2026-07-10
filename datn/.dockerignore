@@ -1,0 +1,10 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!target/*.jar
+*.log
+hs_err_pid*.log
+cp.txt
+.git/
+.idea/
+.vscode/
+HELP.md

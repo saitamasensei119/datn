@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ProfileModal from './ProfileModal';
 import { 
   BookOpen, 
   Building2, 
@@ -12,8 +13,7 @@ import {
   LogOut, 
   Sun, 
   Moon, 
-  CheckSquare, 
-  UserCheck 
+  CheckSquare 
 } from 'lucide-react';
 
 interface SidebarLinkProps {
@@ -41,6 +41,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const navigate = useNavigate();
   const location = useLocation();
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' || 'dark';
@@ -154,9 +155,23 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
             </button>
 
             {/* Profile badge */}
-            <div className="user-profile-badge">
+            <div
+              className="user-profile-badge"
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              onClick={() => setIsProfileOpen(true)}
+              title="Cài đặt tài khoản / Đổi mật khẩu & Avatar"
+            >
               <div className="avatar">
-                {user.email.charAt(0).toUpperCase()}
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt="Avatar"
+                    style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                  />
+                ) : (
+                  user.email.charAt(0).toUpperCase()
+                )}
               </div>
               <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {user.email}
@@ -170,6 +185,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
         <main className="main-content">
           {children}
         </main>
+        <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
       </div>
     </div>
   );

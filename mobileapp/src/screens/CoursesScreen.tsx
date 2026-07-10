@@ -9,6 +9,7 @@ interface MyCourse {
   lecturer?: string;
   credits?: number;
   status?: string;
+  schedules?: any[];
 }
 
 export default function CoursesScreen() {
@@ -26,6 +27,7 @@ export default function CoursesScreen() {
         lecturer: item.course?.lecturerName || item.lecturerName || item.lecturer,
         credits: item.course?.credits || item.credits,
         status: item.course?.status || item.status,
+        schedules: item.course?.schedules || item.schedules || [],
       }));
       setCourses(mappedCourses);
     } catch (err) {
@@ -85,6 +87,24 @@ export default function CoursesScreen() {
             <Text style={styles.boldText}>Tín chỉ:</Text> {item.credits}
           </Text>
         )}
+
+        <View style={styles.scheduleBox}>
+          <Text style={styles.scheduleTitle}>Lịch học & Phòng:</Text>
+          {item.schedules && item.schedules.length > 0 ? (
+            item.schedules.map((sch: any, idx: number) => (
+              <View key={idx} style={styles.scheduleRow}>
+                <Text style={styles.scheduleTime}>
+                  Thứ {sch.dayOfWeek}: {sch.timeString || `Tiết ${sch.startPeriod}-${sch.endPeriod}`}
+                </Text>
+                <Text style={styles.scheduleRoom}>
+                  Phòng: {sch.roomName || "Chưa gán"}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.noScheduleText}>Chưa có lịch học cụ thể</Text>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -209,5 +229,41 @@ const styles = StyleSheet.create({
   emptyText: {
     color: "#94a3b8",
     fontSize: 16,
+  },
+  scheduleBox: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#f8fafc",
+    backgroundColor: "#f8fafc",
+    padding: 8,
+    borderRadius: 8,
+  },
+  scheduleTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+    marginBottom: 4,
+  },
+  scheduleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  scheduleTime: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#4f46e5",
+  },
+  scheduleRoom: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#10b981",
+  },
+  noScheduleText: {
+    fontSize: 12,
+    fontStyle: "italic",
+    color: "#94a3b8",
   },
 });

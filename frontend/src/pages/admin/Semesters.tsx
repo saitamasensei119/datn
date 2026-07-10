@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { semesterApi } from "../../services/api";
-import { Plus, Edit2, Trash2, X, AlertTriangle, Calendar } from "lucide-react";
+import { Plus, Edit2, Trash2, X, AlertTriangle } from "lucide-react";
 import AdminLayout from "../../components/AdminLayout";
 interface Semester {
   id: number;
