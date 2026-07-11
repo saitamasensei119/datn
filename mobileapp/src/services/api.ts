@@ -2,10 +2,11 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Replace with your local machine's IP address where Spring Boot is running
-// const BASE_URL = "http://192.168.0.100:8080"; 
-const BASE_URL = "http://192.168.91.128:8080"; 
+export const BASE_URL = "http://192.168.0.102:8080"; 
+// const BASE_URL = "http://192.168.91.128:8080"; 
 const api = axios.create({
   baseURL: BASE_URL,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -24,20 +25,85 @@ api.interceptors.request.use(
   }
 );
 
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response && error.response.status === 401) {
-      await AsyncStorage.removeItem("token");
-      await AsyncStorage.removeItem("user");
-      // AppNavigator or AuthContext will handle navigation to Login
+    const originalRequest = error.config;
+
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+      if (originalRequest.url?.includes("/auth/login") || originalRequest.url?.includes("/auth/refresh")) {
+        await AsyncStorage.removeItem("token");
+        await AsyncStorage.removeItem("user");
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = "Bearer " + token;
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const res = await axios.post(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true });
+        if (res.data && res.data.token) {
+          const newToken = res.data.token;
+          await AsyncStorage.setItem("token", newToken);
+          api.defaults.headers.common["Authorization"] = "Bearer " + newToken;
+          originalRequest.headers.Authorization = "Bearer " + newToken;
+          processQueue(null, newToken);
+          return api(originalRequest);
+        } else {
+          throw new Error("No token returned");
+        }
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        await AsyncStorage.removeItem("token");
+        await AsyncStorage.removeItem("user");
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
+
     return Promise.reject(error);
   }
 );
 
 export const authApi = {
   login: (data: any) => api.post("/auth/login", data),
+};
+
+export const profileApi = {
+  getMyProfile: () => api.get("/api/profile"),
+  changePassword: (data: any) => api.put("/api/profile/password", data),
+  changeContact: (data: { personalEmail?: string; phoneNumber?: string }) => api.put("/api/profile/contact", data),
+  uploadAvatar: (formData: FormData) => api.post("/api/profile/avatar/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  }),
 };
 
 export const studentApi = {

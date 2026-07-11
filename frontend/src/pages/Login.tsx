@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../services/api';
 import { BookOpen, Key, Mail, Eye, EyeOff } from 'lucide-react';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,6 +11,8 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [requireCaptcha, setRequireCaptcha] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -17,16 +20,25 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (requireCaptcha && !captchaToken) {
+      setError('Vui lòng hoàn thành xác thực CAPTCHA (Tôi không phải là người máy) bên dưới.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const response = await authApi.login({ email, password });
+      const response = await authApi.login({ 
+        email, 
+        password, 
+        captchaToken: captchaToken || undefined 
+      });
       const { accessToken, token } = response.data;
       const finalToken = accessToken || token;
       
       login(finalToken);
       
-      // Decode locally to check the role and redirect
       const base64Url = finalToken.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const decoded = JSON.parse(window.atob(base64));
@@ -41,10 +53,13 @@ const Login: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      setError(
-        err.response?.data?.message || 
-        'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.'
-      );
+      const errMsg = err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.';
+      setError(errMsg);
+
+      // Nếu server yêu cầu CAPTCHA hoặc thông báo lỗi liên quan đến số lần sai
+      if (errMsg.includes('CAPTCHA') || errMsg.includes('người máy') || errMsg.includes('đăng nhập sai')) {
+        setRequireCaptcha(true);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +75,7 @@ const Login: React.FC = () => {
         <p className="login-subtitle">Hệ Thống Đăng Ký Học Phần</p>
 
         {error && (
-          <div className="alert alert-danger" style={{ textAlign: 'left' }}>
+          <div className="alert alert-danger" style={{ textAlign: 'left', marginBottom: '1rem' }}>
             <span>{error}</span>
           </div>
         )}
@@ -144,6 +159,15 @@ const Login: React.FC = () => {
               </Link>
             </div>
           </div>
+
+          {requireCaptcha && (
+            <div style={{ margin: '1rem 0', display: 'flex', justifyContent: 'center' }}>
+              <ReCAPTCHA
+                sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+                onChange={(token) => setCaptchaToken(token)}
+              />
+            </div>
+          )}
 
           <button 
             type="submit" 
