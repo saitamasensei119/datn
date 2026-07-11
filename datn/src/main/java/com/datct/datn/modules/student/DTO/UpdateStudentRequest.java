@@ -14,4 +14,8 @@ public class UpdateStudentRequest {
     private String studentCode;
 
     private Long departmentId;
+
+    private String personalEmail;
+
+    private String phoneNumber;
 }

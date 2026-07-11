@@ -40,4 +40,10 @@ public class Student {
     private Department department;
     @Enumerated(EnumType.STRING)
     private StudentStatus status = StudentStatus.ACTIVE;
+
+    @Column(name = "personal_email")
+    private String personalEmail;
+
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
 }

@@ -4,6 +4,7 @@ import axios from "axios";
 const api = axios.create({
   // Vite proxy will redirect this, so we can use relative path /
   baseURL: "",
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -65,27 +66,12 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (!refreshToken) {
-        isRefreshing = false;
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
-        }
-        return Promise.reject(error);
-      }
-
       try {
-        const res = await axios.post("/auth/refresh", { refreshToken });
+        const res = await axios.post("/auth/refresh", {}, { withCredentials: true });
         const newAccessToken = res.data?.accessToken || res.data?.token;
-        const newRefreshToken = res.data?.refreshToken;
 
         if (newAccessToken) {
           localStorage.setItem("token", newAccessToken);
-          if (newRefreshToken) {
-            localStorage.setItem("refreshToken", newRefreshToken);
-          }
           api.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           processQueue(null, newAccessToken);
@@ -110,16 +96,24 @@ api.interceptors.response.use(
 // API Endpoints Mapping
 export const authApi = {
   login: (data: any) => api.post("/auth/login", data),
-  refresh: (refreshToken: string) => api.post("/auth/refresh", { refreshToken }),
-  logout: (refreshToken?: string) => api.post("/auth/logout", { refreshToken }),
+  refresh: () => api.post("/auth/refresh", {}),
+  logout: () => api.post("/auth/logout", {}),
+  forgotPassword: (data: { email: string }) => api.post("/auth/forgot-password", data),
+  resetPassword: (data: { token: string; newPassword: string; confirmPassword: string }) => api.post("/auth/reset-password", data),
 };
 
 export const profileApi = {
   getMyProfile: () => api.get("/api/profile"),
   changePassword: (data: { oldPassword: string; newPassword: string; confirmPassword: string }) =>
     api.put("/api/profile/password", data),
-  changeAvatar: (data: { avatarUrl: string }) =>
-    api.put("/api/profile/avatar", data),
+  uploadAvatar: (formData: FormData) =>
+    api.post("/api/profile/avatar/upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }),
+  updateContact: (data: { personalEmail: string; phoneNumber: string }) =>
+    api.put("/api/profile/contact", data),
 };
 
 export const departmentApi = {

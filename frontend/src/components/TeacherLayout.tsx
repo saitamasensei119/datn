@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import ProfileModal from "./ProfileModal";
 import {
   BookOpen,
   Book,
@@ -11,6 +10,7 @@ import {
   Moon,
   LayoutDashboard,
   BarChart3,
+  User,
 } from "lucide-react";
 
 interface SidebarLinkProps {
@@ -38,10 +38,8 @@ const TeacherLayout: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [sidebarOpen, _setSidebarOpen] = useState(true);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
     const savedTheme =
@@ -64,14 +62,6 @@ const TeacherLayout: React.FC<{ children: React.ReactNode }> = ({
 
   if (!user) return null;
 
-  const getHeaderTitle = () => {
-    const path = location.pathname;
-    if (path.includes("/teacher/dashboard")) return "Tổng Quan Giảng Viên";
-    if (path.includes("/teacher/courses")) return "Lớp Học Phần";
-    if (path.includes("/teacher/grades")) return "Nhập Điểm";
-    if (path.includes("/teacher/attendance")) return "Điểm Danh";
-    return "Trang Chủ Giảng Viên";
-  };
 
   return (
     <div className="app-container">
@@ -105,6 +95,12 @@ const TeacherLayout: React.FC<{ children: React.ReactNode }> = ({
               icon={<BarChart3 size={20} />}
               label="Điểm Danh"
             />
+            <li className="sidebar-divider">Cá Nhân</li>
+            <SidebarLink
+              to="/teacher/profile"
+              icon={<User size={20} />}
+              label="Hồ Sơ Của Tôi"
+            />
           </ul>
         </nav>
 
@@ -122,47 +118,8 @@ const TeacherLayout: React.FC<{ children: React.ReactNode }> = ({
 
       {/* Main Content */}
       <main className="main-content">
-        {/* Header */}
-        <header className="app-header">
-          <div className="header-left">
-            {/* <button
-              className="toggle-sidebar-btn"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
-              ☰
-            </button> */}
-            <h1 className="page-title">{getHeaderTitle()}</h1>
-          </div>
-          <div className="header-right">
-            <div
-              className="user-profile-badge"
-              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "0.5rem" }}
-              onClick={() => setIsProfileOpen(true)}
-              title="Cài đặt tài khoản / Đổi mật khẩu & Avatar"
-            >
-              <div className="avatar">
-                {user.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt="Avatar"
-                    style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
-                    onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
-                  />
-                ) : (
-                  user.email.charAt(0).toUpperCase()
-                )}
-              </div>
-              <span className="user-name" style={{ maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {user.email}
-              </span>
-              <span className="badge badge-warning">GIẢNG VIÊN</span>
-            </div>
-          </div>
-        </header>
-
         {/* Content Area */}
         <div className="content-area">{children}</div>
-        <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
       </main>
     </div>
   );

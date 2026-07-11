@@ -11,6 +11,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.datct.datn.common.util.ExcelSecurityUtil;
 
 import java.io.InputStream;
 import java.util.HashMap;
@@ -80,6 +81,7 @@ public class RoomService {
 
     @Transactional
     public Map<String, Object> importExcel(MultipartFile file) {
+        ExcelSecurityUtil.validateExcelFile(file, 5 * 1024 * 1024);
         long startTime = System.currentTimeMillis();
         int created = 0;
         int skipped = 0;
@@ -152,18 +154,24 @@ public class RoomService {
 
     private String getCellString(Cell cell) {
         if (cell == null) return "";
+        String val = "";
         switch (cell.getCellType()) {
             case STRING:
-                return cell.getStringCellValue().trim();
+                val = cell.getStringCellValue().trim();
+                break;
             case NUMERIC:
-                double val = cell.getNumericCellValue();
-                if (val == Math.floor(val)) {
-                    return String.valueOf((long) val);
+                double dVal = cell.getNumericCellValue();
+                if (dVal == Math.floor(dVal)) {
+                    val = String.valueOf((long) dVal);
+                } else {
+                    val = String.valueOf(dVal);
                 }
-                return String.valueOf(val);
+                break;
             default:
-                return "";
+                val = "";
+                break;
         }
+        return ExcelSecurityUtil.sanitizeCellString(val);
     }
 
     private Integer getCellInt(Cell cell) {

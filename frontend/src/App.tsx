@@ -1,6 +1,11 @@
 import "./App.css";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import ProfilePage from "./pages/ProfilePage";
+import TeacherLayout from "./components/TeacherLayout";
+import StudentLayout from "./components/StudentLayout";
 
 // Admin Components
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -36,6 +41,30 @@ function App() {
     <Routes>
       {/* Public Route */}
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* Profile Routes */}
+      <Route
+        path="/teacher/profile"
+        element={
+          <ProtectedRoute requiredRole="TEACHER">
+            <TeacherLayout>
+              <ProfilePage />
+            </TeacherLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/profile"
+        element={
+          <ProtectedRoute requiredRole="STUDENT">
+            <StudentLayout>
+              <ProfilePage />
+            </StudentLayout>
+          </ProtectedRoute>
+        }
+      />
 
       {/* Admin Routes */}
       <Route

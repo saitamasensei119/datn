@@ -11,6 +11,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.datct.datn.common.util.ExcelSecurityUtil;
 
 import java.io.InputStream;
 import java.util.HashMap;
@@ -45,6 +46,9 @@ public class SubjectImportService {
 
     @Transactional
     public Map<String, Object> importExcel(MultipartFile file) {
+        // Kiểm tra bảo mật 3 lớp (Dung lượng < 5MB, MIME/Extension, Magic Bytes nhị phân)
+        ExcelSecurityUtil.validateExcelFile(file, 5 * 1024 * 1024);
+
         long startTime = System.currentTimeMillis();
         int created = 0;
         int skipped = 0;
@@ -160,17 +164,23 @@ public class SubjectImportService {
 
     private String getCellString(Cell cell) {
         if (cell == null) return "";
+        String val = "";
         switch (cell.getCellType()) {
             case STRING:
-                return cell.getStringCellValue().trim();
+                val = cell.getStringCellValue().trim();
+                break;
             case NUMERIC:
-                double val = cell.getNumericCellValue();
-                if (val == Math.floor(val)) {
-                    return String.valueOf((long) val);
+                double dVal = cell.getNumericCellValue();
+                if (dVal == Math.floor(dVal)) {
+                    val = String.valueOf((long) dVal);
+                } else {
+                    val = String.valueOf(dVal);
                 }
-                return String.valueOf(val);
+                break;
             default:
-                return "";
+                val = "";
+                break;
         }
+        return ExcelSecurityUtil.sanitizeCellString(val);
     }
 }

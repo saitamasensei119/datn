@@ -41,4 +41,10 @@ public class Lecturer {
     private Department department;
     @Enumerated(EnumType.STRING)
     private LecturerStatus status = LecturerStatus.ACTIVE;
+
+    @Column(name = "personal_email")
+    private String personalEmail;
+
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
 }

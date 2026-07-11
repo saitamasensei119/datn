@@ -19,4 +19,8 @@ public class StudentRequest {
     private Long departmentId;
 
     private StudentStatus status;
+
+    private String personalEmail;
+
+    private String phoneNumber;
 }

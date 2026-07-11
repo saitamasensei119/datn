@@ -1,3 +1,9 @@
 .idea
 *.log
 *.txt
+
+### Uploaded Files ###
+uploads/*
+!uploads/avatars
+uploads/avatars/*
+!uploads/avatars/.gitkeep

@@ -93,11 +93,13 @@ public class LecturerService {
 
         return new LecturerResponse(
                 lecturer.getId(),
+                lecturer.getLecturerCode(),
                 user.getFullName(),
                 user.getEmail(),
-                lecturer.getLecturerCode(),
                 department.getName(),
-                lecturer.getStatus()
+                lecturer.getStatus(),
+                lecturer.getPersonalEmail(),
+                lecturer.getPhoneNumber()
         );
     }
 
@@ -187,6 +189,10 @@ public class LecturerService {
 
         userRepository.save(currentUser);
 
+        lecturer.setPersonalEmail(request.getPersonalEmail());
+        lecturer.setPhoneNumber(request.getPhoneNumber());
+        lecturer = lecturerRepository.save(lecturer);
+
         return mapToResponse(lecturer);
     }
 
@@ -239,6 +245,10 @@ public class LecturerService {
                 request.getStatus()
         );
 
+        lecturer.setPersonalEmail(request.getPersonalEmail());
+        lecturer.setPhoneNumber(request.getPhoneNumber());
+        lecturer = lecturerRepository.save(lecturer);
+
         return mapToResponse(lecturer);
     }
 
@@ -255,7 +265,9 @@ public class LecturerService {
                 lecturer.getDepartment() != null
                         ? lecturer.getDepartment().getName()
                         : null,
-                lecturer.getStatus()
+                lecturer.getStatus(),
+                lecturer.getPersonalEmail(),
+                lecturer.getPhoneNumber()
         );
     }
 }

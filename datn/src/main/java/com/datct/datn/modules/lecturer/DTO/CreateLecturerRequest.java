@@ -16,4 +16,8 @@ public class CreateLecturerRequest {
     private String lecturerCode;
 
     private Long departmentId;
+
+    private String personalEmail;
+
+    private String phoneNumber;
 }

@@ -10,6 +10,12 @@ CREATE TABLE users (
 
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
 
+    failed_login_attempts INTEGER DEFAULT 0,
+    account_locked_until TIMESTAMP WITHOUT TIME ZONE,
+    last_password_reset_date TIMESTAMP WITHOUT TIME ZONE,
+
+    avatar VARCHAR(1000),
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -36,6 +42,8 @@ CREATE TABLE students (
     --DROPPED_OUT,   thôi học
     --GRADUATED      đã tốt nghiệp
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    personal_email VARCHAR(255),
+    phone_number VARCHAR(20);
 
     CONSTRAINT fk_students_user
         FOREIGN KEY (user_id)
@@ -62,6 +70,9 @@ CREATE TABLE lecturers (
     --ON_LEAVE  : nghỉ phép / tạm nghỉ
     --RETIRED   : nghỉ hưu
     --RESIGNED  : nghỉ việc
+
+    personal_email VARCHAR(255),
+    phone_number VARCHAR(20);
 
     CONSTRAINT fk_lecturers_user
         FOREIGN KEY (user_id)
@@ -489,3 +500,19 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- Tạo chỉ mục (Index) giúp tra cứu nhanh Token và kiểm tra trạng thái
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+
+
+-- password_reset_tokens
+
+CREATE TABLE password_reset_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    token VARCHAR(50) NOT NULL,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expiry_date TIMESTAMP NOT NULL,
+    used BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX idx_password_reset_token ON password_reset_tokens(token);

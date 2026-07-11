@@ -59,6 +59,8 @@ public class StudentService {
             student.setStudentCode(request.getStudentCode());
             student.setUser(savedUser);
             student.setDepartment(department);
+            student.setPersonalEmail(request.getPersonalEmail());
+            student.setPhoneNumber(request.getPhoneNumber());
 
             Student savedStudent = studentRepository.save(student);
 
@@ -126,6 +128,8 @@ public class StudentService {
         student.setDepartment(department);
 
         student.setStatus(request.getStatus());
+        student.setPersonalEmail(request.getPersonalEmail());
+        student.setPhoneNumber(request.getPhoneNumber());
 
         // update user
         User user = student.getUser();
@@ -156,7 +160,9 @@ public class StudentService {
                         ? student.getDepartment().getId()
                         : null,
                 student.getDepartment() != null ? student.getDepartment().getName() : null,
-                student.getStatus()
+                student.getStatus(),
+                student.getPersonalEmail(),
+                student.getPhoneNumber()
         );
     }
 
@@ -188,7 +194,9 @@ public class StudentService {
                         student.getStudentCode(),
                         student.getDepartment() != null ? student.getDepartment().getId() : null,
                         student.getDepartment() != null ? student.getDepartment().getName() : null,
-                        student.getStatus()
+                        student.getStatus(),
+                        student.getPersonalEmail(),
+                        student.getPhoneNumber()
                 ))
                 .toList();
     }
@@ -233,6 +241,10 @@ public class StudentService {
 
 
         userRepository.save(currentUser);
+
+        student.setPersonalEmail(request.getPersonalEmail());
+        student.setPhoneNumber(request.getPhoneNumber());
+        student = studentRepository.save(student);
 
         return mapToResponse(student);
     }

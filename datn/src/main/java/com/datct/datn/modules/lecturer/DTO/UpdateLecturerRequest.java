@@ -19,4 +19,8 @@ public class UpdateLecturerRequest {
     private LecturerStatus status;
 
     private Boolean enabled;
+
+    private String personalEmail;
+
+    private String phoneNumber;
 }

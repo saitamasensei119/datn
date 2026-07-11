@@ -20,6 +20,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.datct.datn.common.util.ExcelSecurityUtil;
 
 import java.io.InputStream;
 import java.util.HashMap;
@@ -41,6 +42,7 @@ public class CourseImportService {
 
     @Transactional
     public Map<String, Object> importExcel(MultipartFile file, Long semesterId) {
+        ExcelSecurityUtil.validateExcelFile(file, 10 * 1024 * 1024);
         Map<String, Object> result = new HashMap<>();
         int courseCount = 0;
         int scheduleCount = 0;
@@ -234,12 +236,13 @@ public class CourseImportService {
 
     private String getCellString(Cell cell) {
         if (cell == null) return "";
+        String val = "";
         if (cell.getCellType() == CellType.STRING) {
-            return cell.getStringCellValue().trim();
+            val = cell.getStringCellValue().trim();
         } else if (cell.getCellType() == CellType.NUMERIC) {
-            return String.valueOf((int) cell.getNumericCellValue());
+            val = String.valueOf((int) cell.getNumericCellValue());
         }
-        return "";
+        return ExcelSecurityUtil.sanitizeCellString(val);
     }
 
     private Integer getCellInt(Cell cell) {

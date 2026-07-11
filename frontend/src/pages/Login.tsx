@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../services/api';
 import { BookOpen, Key, Mail, Eye, EyeOff } from 'lucide-react';
@@ -21,10 +21,10 @@ const Login: React.FC = () => {
 
     try {
       const response = await authApi.login({ email, password });
-      const { accessToken, token, refreshToken } = response.data;
+      const { accessToken, token } = response.data;
       const finalToken = accessToken || token;
       
-      login(finalToken, refreshToken);
+      login(finalToken);
       
       // Decode locally to check the role and redirect
       const base64Url = finalToken.split('.')[1];
@@ -137,6 +137,11 @@ const Login: React.FC = () => {
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <Link to="/forgot-password" style={{ color: 'var(--primary-color)', fontSize: '0.85rem', textDecoration: 'none' }}>
+                Quên mật khẩu?
+              </Link>
             </div>
           </div>
 

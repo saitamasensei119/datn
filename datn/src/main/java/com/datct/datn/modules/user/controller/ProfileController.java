@@ -8,9 +8,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/profile")
@@ -39,11 +41,21 @@ public class ProfileController {
         return ResponseEntity.ok("Thay đổi mật khẩu thành công");
     }
 
-    @Operation(summary = "Thay đổi ảnh đại diện (Avatar)", description = "Cập nhật URL ảnh đại diện cho người dùng đang đăng nhập")
-    @PutMapping("/avatar")
-    public ResponseEntity<UserResponse> changeAvatar(@Valid @RequestBody ChangeAvatarRequest request) {
+
+
+    @Operation(summary = "Tải lên tệp ảnh đại diện (File Upload)", description = "Tải ảnh từ máy tính với kiểm tra bảo mật nhị phân Magic Bytes (< 5MB, JPG/PNG/WEBP/GIF)")
+    @PostMapping(value = "/avatar/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UserResponse> uploadAvatar(@RequestParam("file") MultipartFile file) {
         String email = getCurrentUserEmail();
-        UserResponse response = profileService.changeAvatar(email, request);
+        UserResponse response = profileService.uploadAvatar(email, file);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Thay đổi thông tin liên lạc cá nhân", description = "Cập nhật Email cá nhân và Số điện thoại tại bảng Student hoặc Lecturer")
+    @PutMapping("/contact")
+    public ResponseEntity<UserResponse> changeContact(@Valid @RequestBody com.datct.datn.modules.user.DTO.UpdatePersonalContactRequest request) {
+        String email = getCurrentUserEmail();
+        UserResponse response = profileService.updateContact(email, request);
         return ResponseEntity.ok(response);
     }
 }

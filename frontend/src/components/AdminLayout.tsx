@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import ProfileModal from "./ProfileModal";
 import {
   BookOpen,
   Building2,
@@ -39,10 +38,8 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon, label }) => {
 const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [sidebarOpen, _setSidebarOpen] = useState(true);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
     const savedTheme =
@@ -65,16 +62,6 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   if (!user) return null;
 
-  const getHeaderTitle = () => {
-    const path = location.pathname;
-    if (path.includes("/admin/dashboard")) return "Tổng Quan Hệ Thống";
-    if (path.includes("/admin/departments")) return "Quản Lý Khoa / Ngành";
-    if (path.includes("/admin/subjects")) return "Quản Lý Môn Học";
-    if (path.includes("/admin/semesters")) return "Quản Lý Học Kỳ";
-    if (path.includes("/admin/lecturers")) return "Quản Lý Giảng Viên";
-    if (path.includes("/admin/students")) return "Quản Lý Sinh Viên";
-    return "Hệ Thống Quản Lý";
-  };
 
   return (
     <div className="app-container">
@@ -145,41 +132,8 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       {/* Main Content */}
       <main className="main-content">
-        {/* Header */}
-        <header className="app-header">
-          <div className="header-left">
-            <h1 className="page-title">{getHeaderTitle()}</h1>
-          </div>
-          <div className="header-right">
-            <div
-              className="user-profile-badge"
-              style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "0.5rem" }}
-              onClick={() => setIsProfileOpen(true)}
-              title="Cài đặt tài khoản / Đổi mật khẩu & Avatar"
-            >
-              <div className="avatar">
-                {user.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt="Avatar"
-                    style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
-                    onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
-                  />
-                ) : (
-                  user.email.charAt(0).toUpperCase()
-                )}
-              </div>
-              <span className="user-name" style={{ maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {user.email}
-              </span>
-              <span className="badge badge-danger">ADMIN</span>
-            </div>
-          </div>
-        </header>
-
         {/* Content Area */}
         <div className="content-area">{children}</div>
-        <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
       </main>
     </div>
   );
