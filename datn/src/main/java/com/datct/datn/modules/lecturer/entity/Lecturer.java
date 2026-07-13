@@ -42,7 +42,7 @@ public class Lecturer {
     @Enumerated(EnumType.STRING)
     private LecturerStatus status = LecturerStatus.ACTIVE;
 
-    @Column(name = "personal_email")
+    @Column(name = "personal_email", unique = true)
     private String personalEmail;
 
     @Column(name = "phone_number", length = 20)

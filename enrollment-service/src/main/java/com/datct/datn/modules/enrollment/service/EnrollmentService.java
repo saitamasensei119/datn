@@ -14,6 +14,8 @@ import com.datct.datn.modules.lecturer.entity.Lecturer;
 import com.datct.datn.modules.student.entity.Student;
 import com.datct.datn.modules.subject.entity.SubjectCondition;
 import com.datct.datn.modules.subject.repository.SubjectConditionRepository;
+import com.datct.datn.modules.course.entity.SemesterStatus;
+import com.datct.datn.modules.enrollment.repository.PreRegistrationRepository;
 import com.datct.datn.modules.grade.entity.StudentSubjectResult;
 import com.datct.datn.modules.grade.repository.StudentSubjectResultRepository;
 import com.datct.datn.modules.student.repository.StudentRepository;
@@ -37,6 +39,8 @@ public class EnrollmentService {
     private final SubjectConditionRepository subjectConditionRepository;
     private final StudentSubjectResultRepository studentSubjectResultRepository;
     private final ClassScheduleRepository classScheduleRepository;
+    private final PreRegistrationRepository preRegistrationRepository;
+    private final RedisSlotService redisSlotService;
 
     @Transactional
     public void enroll(EnrollmentRequest request) {
@@ -66,7 +70,7 @@ public class EnrollmentService {
                         request.getCourseId()
                 ).orElseThrow(() -> new RuntimeException("Course not found"));
 
-        validateSubjectConditions(student, course, request.isIgnoreWarning());
+        checkEnrollmentEligibilityAndConditions(student, course, request.isIgnoreWarning());
 
         long currentStudents =
                 enrollmentRepository.countByCourseId(
@@ -112,7 +116,7 @@ public class EnrollmentService {
                         request.getCourseId()
                 ).orElseThrow(() -> new RuntimeException("Course not found"));
 
-        validateSubjectConditions(student, course, request.isIgnoreWarning());
+        checkEnrollmentEligibilityAndConditions(student, course, request.isIgnoreWarning());
 
         // check already enrolled
         boolean exists =
@@ -155,8 +159,8 @@ public class EnrollmentService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
 
-        // Validate Subject Conditions
-        validateSubjectConditions(student, course, ignoreWarning);
+        // Kiểm tra nhánh trạng thái học kỳ theo quy trình 2 giai đoạn (Wishlist-Driven 2-Phase Enrollment)
+        checkEnrollmentEligibilityAndConditions(student, course, ignoreWarning);
 
         // Check if already enrolled
         boolean exists = enrollmentRepository.existsByStudentIdAndCourseId(student.getId(), courseId);
@@ -178,12 +182,47 @@ public class EnrollmentService {
         enrollmentRepository.save(enrollment);
     }
 
+    private void checkEnrollmentEligibilityAndConditions(Student student, Course course, boolean ignoreWarning) {
+        SemesterStatus status = course.getSemester().getStatus();
+        if (status == SemesterStatus.ENROLLMENT_PHASE_1) {
+            // GIAI ĐOẠN 1: Đăng ký theo Nguyện vọng (Fast Path - Zero-Validation)
+            // Không cần kiểm tra <= 25 tín chỉ hay môn tiên quyết vì đã được thẩm định khắt khe ở bước Đăng ký Nguyện Vọng
+            boolean inWishlist = preRegistrationRepository.existsByStudentIdAndSubjectIdAndSemesterId(
+                    student.getId(), course.getSubject().getId(), course.getSemester().getId()
+            );
+            if (!inWishlist) {
+                throw new RuntimeException("Giai đoạn 1: Bạn chỉ được phép đăng ký các lớp học phần của Môn học đã đăng ký trong Nguyện vọng từ trước!");
+            }
+            // BỎ QUA HOÀN TOÀN validateSubjectConditions() -> Thẳng tiến kiểm tra trùng & sĩ số!
+        } else {
+            // GIAI ĐOẠN 2 (ENROLLMENT_OPEN hoặc mặc định): Đăng ký tự do / bổ sung -> Kiểm tra giới hạn 25 tín chỉ & Ràng buộc học thuật
+            Integer currentCredits = enrollmentRepository.sumCreditsByStudentIdAndSemesterId(
+                    student.getId(), course.getSemester().getId()
+            );
+            if (currentCredits + course.getSubject().getCredits() > 25) {
+                throw new RuntimeException("Giai đoạn 2: Tổng số tín chỉ đăng ký vượt quá giới hạn cho phép (25 tín chỉ)!");
+            }
+            validateSubjectConditions(student, course, ignoreWarning);
+        }
+    }
+
     private void validateSubjectConditions(Student student, Course course, boolean ignoreWarning) {
         List<SubjectCondition> conditions = subjectConditionRepository.findBySubjectId(course.getSubject().getId());
+        if (conditions.isEmpty()) {
+            return;
+        }
+
+        // TỐI ƯU 1: Gộp toàn bộ truy vấn kiểm tra điểm môn tiên quyết/môn trước vào 1 câu SQL IN (Batch Query)
+        java.util.Set<Long> requiredSubjectIds = conditions.stream()
+                .map(c -> c.getRequiredSubject().getId())
+                .collect(java.util.stream.Collectors.toSet());
+
+        java.util.Map<Long, StudentSubjectResult> resultMap = studentSubjectResultRepository
+                .findByStudentIdAndSubjectIdIn(student.getId(), requiredSubjectIds).stream()
+                .collect(java.util.stream.Collectors.toMap(r -> r.getSubject().getId(), r -> r, (r1, r2) -> r1));
+
         for (SubjectCondition condition : conditions) {
-            StudentSubjectResult result = studentSubjectResultRepository
-                    .findByStudentIdAndSubjectId(student.getId(), condition.getRequiredSubject().getId())
-                    .orElse(null);
+            StudentSubjectResult result = resultMap.get(condition.getRequiredSubject().getId());
 
             switch (condition.getConditionType()) {
                 case PREREQUISITE:
@@ -198,9 +237,10 @@ public class EnrollmentService {
                     break;
                 case COREQUISITE:
                     if (result == null) {
-                        boolean isEnrolled = enrollmentRepository.findByStudentId(student.getId()).stream()
-                                .anyMatch(e -> e.getCourse().getSubject().getId().equals(condition.getRequiredSubject().getId())
-                                        && e.getCourse().getSemester().getId().equals(course.getSemester().getId()));
+                        // TỐI ƯU 2: Sử dụng SQL EXISTS trên Index thay vì kéo toàn bộ danh sách Enrollment lên RAM rồi lọc bằng Java Stream
+                        boolean isEnrolled = enrollmentRepository.existsByStudentIdAndSubjectIdAndSemesterId(
+                                student.getId(), condition.getRequiredSubject().getId(), course.getSemester().getId()
+                        );
                         if (!isEnrolled) {
                             throw new RuntimeException("Bạn phải học song hành hoặc đã học môn: " + condition.getRequiredSubject().getName());
                         }
@@ -290,6 +330,7 @@ public class EnrollmentService {
         }
 
         enrollmentRepository.delete(enrollment);
+        redisSlotService.releaseSlot(courseId);
     }
 
     @Transactional
@@ -299,6 +340,7 @@ public class EnrollmentService {
 
         // No status check for admin
         enrollmentRepository.delete(enrollment);
+        redisSlotService.releaseSlot(courseId);
     }
 
     public Long getCurrentStudentId() {

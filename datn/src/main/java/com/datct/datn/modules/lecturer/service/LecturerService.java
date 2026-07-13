@@ -6,6 +6,7 @@ import com.datct.datn.modules.lecturer.DTO.LecturerResponse;
 import com.datct.datn.modules.lecturer.DTO.UpdateLecturerRequest;
 import com.datct.datn.modules.lecturer.entity.Lecturer;
 import com.datct.datn.modules.lecturer.repository.LecturerRepository;
+import com.datct.datn.modules.student.repository.StudentRepository;
 import com.datct.datn.modules.user.entity.Department;
 import com.datct.datn.modules.user.entity.Role;
 import com.datct.datn.modules.user.entity.User;
@@ -30,6 +31,7 @@ public class LecturerService {
 
     private final DepartmentRepository departmentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final StudentRepository studentRepository;
 
     @Transactional
     public LecturerResponse createLecturer(
@@ -88,6 +90,8 @@ public class LecturerService {
         );
 
         lecturer.setDepartment(department);
+        lecturer.setPersonalEmail(validateAndNormalizePersonalEmail(request.getPersonalEmail(), null));
+        lecturer.setPhoneNumber(request.getPhoneNumber());
 
         lecturer = lecturerRepository.save(lecturer);
 
@@ -128,73 +132,6 @@ public class LecturerService {
         return lecturerRepository.count();
     }
 
-    @Transactional(readOnly = true)
-    public LecturerResponse getMyProfile() {
-
-        Authentication authentication =
-                SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
-
-        CustomUserDetails userDetails =
-                (CustomUserDetails)
-                        authentication.getPrincipal();
-
-        Long userId =
-                userDetails.getUser().getId();
-
-        Lecturer lecturer =
-                lecturerRepository.findByUserId(userId)
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Lecturer not found"
-                                )
-                        );
-
-        return mapToResponse(lecturer);
-    }
-
-    @Transactional
-    public LecturerResponse updateMyProfile(
-            UpdateLecturerRequest request
-    ) {
-
-        Authentication authentication =
-                SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
-
-        CustomUserDetails userDetails =
-                (CustomUserDetails)
-                        authentication.getPrincipal();
-
-        User currentUser =
-                userDetails.getUser();
-
-        Lecturer lecturer =
-                lecturerRepository
-                        .findByUserId(
-                                currentUser.getId()
-                        )
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Lecturer not found"
-                                )
-                        );
-
-        currentUser.setFullName(
-                request.getFullName()
-        );
-
-
-        userRepository.save(currentUser);
-
-        lecturer.setPersonalEmail(request.getPersonalEmail());
-        lecturer.setPhoneNumber(request.getPhoneNumber());
-        lecturer = lecturerRepository.save(lecturer);
-
-        return mapToResponse(lecturer);
-    }
 
     @Transactional
     public LecturerResponse update(
@@ -245,7 +182,7 @@ public class LecturerService {
                 request.getStatus()
         );
 
-        lecturer.setPersonalEmail(request.getPersonalEmail());
+        lecturer.setPersonalEmail(validateAndNormalizePersonalEmail(request.getPersonalEmail(), lecturer.getId()));
         lecturer.setPhoneNumber(request.getPhoneNumber());
         lecturer = lecturerRepository.save(lecturer);
 
@@ -269,5 +206,25 @@ public class LecturerService {
                 lecturer.getPersonalEmail(),
                 lecturer.getPhoneNumber()
         );
+    }
+
+    private String validateAndNormalizePersonalEmail(String personalEmail, Long currentLecturerId) {
+        String normalizedEmail = (personalEmail != null && !personalEmail.trim().isEmpty())
+                ? personalEmail.trim() : null;
+        if (normalizedEmail != null) {
+            if (userRepository.findByEmail(normalizedEmail).isPresent()) {
+                throw new RuntimeException("Email cá nhân này đã bị trùng với email đăng nhập của một tài khoản khác trong hệ thống");
+            }
+            if (currentLecturerId == null) {
+                if (lecturerRepository.existsByPersonalEmail(normalizedEmail) || studentRepository.existsByPersonalEmail(normalizedEmail)) {
+                    throw new RuntimeException("Email cá nhân này đã được sử dụng cho một tài khoản khác trong hệ thống");
+                }
+            } else {
+                if (lecturerRepository.existsByPersonalEmailAndIdNot(normalizedEmail, currentLecturerId) || studentRepository.existsByPersonalEmail(normalizedEmail)) {
+                    throw new RuntimeException("Email cá nhân này đã được sử dụng cho một tài khoản khác trong hệ thống");
+                }
+            }
+        }
+        return normalizedEmail;
     }
 }

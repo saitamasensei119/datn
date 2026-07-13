@@ -16,6 +16,7 @@ import java.util.Map;
 public class EnrollmentConsumer {
 
     private final EnrollmentService enrollmentService;
+    private final RedisSlotService redisSlotService;
 
     @RabbitListener(queues = RabbitMQConfig.ENROLLMENT_QUEUE)
     public void consumeEnrollmentRequest(Map<String, Object> message) {
@@ -28,7 +29,15 @@ public class EnrollmentConsumer {
             enrollmentService.processEnrollmentTask(studentId, courseId, ignoreWarning);
             log.info("Successfully processed enrollment for Student {} and Course {}", studentId, courseId);
         } catch (Exception e) {
-            log.error("Failed to process enrollment request from RabbitMQ: {}", e.getMessage());
+            log.error("Failed to process enrollment request from RabbitMQ: {}. Triggering Redis slot rollback compensation...", e.getMessage());
+            try {
+                if (message.get("courseId") != null) {
+                    Long courseId = Long.valueOf(message.get("courseId").toString());
+                    redisSlotService.releaseSlot(courseId);
+                }
+            } catch (Exception ex) {
+                log.error("Error during Redis slot rollback compensation: {}", ex.getMessage());
+            }
             // In a production system, we might save this to a failed_enrollments table or Dead Letter Queue
         }
     }

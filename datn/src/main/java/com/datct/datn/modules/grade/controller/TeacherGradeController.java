@@ -4,10 +4,12 @@ import com.datct.datn.modules.grade.DTO.GradeSubmissionResponse;
 import com.datct.datn.modules.grade.DTO.StudentGradeResponse;
 import com.datct.datn.modules.grade.DTO.UpdateGradeRequest;
 import com.datct.datn.modules.grade.service.GradeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/teacher/courses/{courseId}/grades")
 @RequiredArgsConstructor
+@Validated
 public class TeacherGradeController {
 
     private final GradeService gradeService;
@@ -30,7 +33,7 @@ public class TeacherGradeController {
     @PutMapping
     public ResponseEntity<String> updateGrades(
             @PathVariable Long courseId,
-            @RequestBody List<UpdateGradeRequest> requests
+            @RequestBody @Valid List<UpdateGradeRequest> requests
     ) {
         gradeService.updateGradesForCourse(courseId, requests);
         return ResponseEntity.ok("Cập nhật điểm thành công");

@@ -25,4 +25,7 @@ public interface StudentRepository
 
     @Query("SELECT s FROM Student s WHERE (:search IS NULL OR :search = '' OR LOWER(s.studentCode) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(s.user.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(s.user.email) LIKE LOWER(CONCAT('%', :search, '%')))")
     org.springframework.data.domain.Page<Student> findPaginated(@org.springframework.data.repository.query.Param("search") String search, org.springframework.data.domain.Pageable pageable);
+
+    boolean existsByPersonalEmail(String personalEmail);
+    boolean existsByPersonalEmailAndIdNot(String personalEmail, Long id);
 }

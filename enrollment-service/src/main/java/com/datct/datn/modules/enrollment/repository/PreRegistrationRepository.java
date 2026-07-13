@@ -15,6 +15,7 @@ public interface PreRegistrationRepository extends JpaRepository<PreRegistration
     List<PreRegistration> findByStudentIdAndSemesterId(Long studentId, Long semesterId);
     
     Optional<PreRegistration> findByStudentIdAndSubjectIdAndSemesterId(Long studentId, Long subjectId, Long semesterId);
+    boolean existsByStudentIdAndSubjectIdAndSemesterId(Long studentId, Long subjectId, Long semesterId);
 
     @Query("SELECT COALESCE(SUM(pr.subject.credits), 0) FROM PreRegistration pr WHERE pr.student.id = :studentId AND pr.semester.id = :semesterId")
     Integer sumCreditsByStudentIdAndSemesterId(Long studentId, Long semesterId);

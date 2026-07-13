@@ -172,16 +172,35 @@ public class ProfileService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email: " + email));
 
+        String normalizedEmail = (request.getPersonalEmail() != null && !request.getPersonalEmail().trim().isEmpty())
+                ? request.getPersonalEmail().trim() : null;
+
+        if (normalizedEmail != null) {
+            if (userRepository.findByEmail(normalizedEmail).isPresent()) {
+                throw new RuntimeException("Email cá nhân này đã bị trùng với email đăng nhập của một tài khoản khác trong hệ thống");
+            }
+        }
+
         if (user.getRole() == Role.STUDENT) {
             Student student = studentRepository.findByUserId(user.getId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin sinh viên"));
-            student.setPersonalEmail(request.getPersonalEmail());
+            if (normalizedEmail != null) {
+                if (studentRepository.existsByPersonalEmailAndIdNot(normalizedEmail, student.getId()) || lecturerRepository.existsByPersonalEmail(normalizedEmail)) {
+                    throw new RuntimeException("Email cá nhân này đã được sử dụng cho một tài khoản khác trong hệ thống");
+                }
+            }
+            student.setPersonalEmail(normalizedEmail);
             student.setPhoneNumber(request.getPhoneNumber());
             studentRepository.save(student);
         } else if (user.getRole() == Role.TEACHER) {
             Lecturer lecturer = lecturerRepository.findByUserId(user.getId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin giảng viên"));
-            lecturer.setPersonalEmail(request.getPersonalEmail());
+            if (normalizedEmail != null) {
+                if (lecturerRepository.existsByPersonalEmailAndIdNot(normalizedEmail, lecturer.getId()) || studentRepository.existsByPersonalEmail(normalizedEmail)) {
+                    throw new RuntimeException("Email cá nhân này đã được sử dụng cho một tài khoản khác trong hệ thống");
+                }
+            }
+            lecturer.setPersonalEmail(normalizedEmail);
             lecturer.setPhoneNumber(request.getPhoneNumber());
             lecturerRepository.save(lecturer);
         }

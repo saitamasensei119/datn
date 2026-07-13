@@ -42,8 +42,8 @@ CREATE TABLE students (
     --DROPPED_OUT,   thôi học
     --GRADUATED      đã tốt nghiệp
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    personal_email VARCHAR(255),
-    phone_number VARCHAR(20);
+    personal_email VARCHAR(255) UNIQUE,
+    phone_number VARCHAR(20) UNIQUE,
 
     CONSTRAINT fk_students_user
         FOREIGN KEY (user_id)
@@ -71,8 +71,8 @@ CREATE TABLE lecturers (
     --RETIRED   : nghỉ hưu
     --RESIGNED  : nghỉ việc
 
-    personal_email VARCHAR(255),
-    phone_number VARCHAR(20);
+    personal_email VARCHAR(255) UNIQUE,
+    phone_number VARCHAR(20) UNIQUE,
 
     CONSTRAINT fk_lecturers_user
         FOREIGN KEY (user_id)
@@ -95,6 +95,9 @@ CREATE TABLE semesters (
 
     status VARCHAR(30) NOT NULL
     -- PRE_REGISTRATION_OPEN, SCHEDULING, ENROLLMENT_OPEN, CLOSED
+    --    ENROLLMENT_PHASE_1, -- Giai đoạn 1 cao điểm: Đăng ký theo nguyện vọng (Fast Path)
+    --    ENROLLMENT_OPEN,    -- Giai đoạn 2 tự do: Đăng ký bổ sung tự do (Full Validation)
+
 );
 
 -- =========================

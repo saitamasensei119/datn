@@ -33,6 +33,7 @@ import java.time.LocalDateTime;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.web.multipart.MultipartFile;
+import com.datct.datn.common.util.ExcelSecurityUtil;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -157,6 +158,10 @@ public class GradeService {
 
     @Transactional
     public void updateGradesForCourse(Long courseId, List<UpdateGradeRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new RuntimeException("Danh sách cập nhật điểm không được để trống");
+        }
+
         Lecturer currentLecturer = getCurrentLecturer();
         verifyCourseOwnership(courseId, currentLecturer);
 
@@ -165,6 +170,18 @@ public class GradeService {
         Double midtermWeight = gradeComponent.getMidtermWeight();
 
         for (UpdateGradeRequest request : requests) {
+            if (request.getEnrollmentId() == null) {
+                throw new RuntimeException("ID bản ghi ghi danh (enrollmentId) không được để trống");
+            }
+
+            if (request.getMidtermScore() != null && (request.getMidtermScore() < 0 || request.getMidtermScore() > 10)) {
+                throw new RuntimeException("Điểm giữa kỳ phải từ 0.0 đến 10.0");
+            }
+
+            if (request.getFinalScore() != null && (request.getFinalScore() < 0 || request.getFinalScore() > 10)) {
+                throw new RuntimeException("Điểm cuối kỳ phải từ 0.0 đến 10.0");
+            }
+
             Enrollment enrollment = enrollmentRepository.findById(request.getEnrollmentId())
                     .orElseThrow(() -> new RuntimeException("Enrollment not found for id: " + request.getEnrollmentId()));
 
@@ -210,10 +227,13 @@ public class GradeService {
 
     @Transactional(readOnly = true)
     public List<com.datct.datn.modules.grade.DTO.GradeSubmissionResponse> getSubmissionsForCourse(Long courseId) {
+        verifyCourseOwnership(courseId, getCurrentLecturer());
         return gradeSubmissionRepository.findByCourseId(courseId).stream()
                 .map(sub -> com.datct.datn.modules.grade.DTO.GradeSubmissionResponse.builder()
                         .gradeType(sub.getGradeType())
                         .status(sub.getStatus())
+                        .submittedAt(sub.getSubmittedAt())
+                        .lockedAt(sub.getLockedAt())
                         .build())
                 .toList();
     }
@@ -224,6 +244,22 @@ public class GradeService {
         verifyCourseOwnership(courseId, currentLecturer);
         GradeSubmission submission = gradeSubmissionRepository.findByCourseIdAndGradeType(courseId, "MIDTERM")
                 .orElseThrow(() -> new RuntimeException("Lỗi dữ liệu: Không tìm thấy trạng thái chốt điểm giữa kỳ của lớp học phần này. Vui lòng liên hệ Admin để xử lý."));
+
+        if ("SUBMITTED".equals(submission.getStatus())) {
+            throw new RuntimeException("Điểm giữa kỳ của lớp học phần này đã được chốt và gửi Ban đào tạo trước đó, không thể chốt lại!");
+        }
+
+        List<Enrollment> enrollments = enrollmentRepository.findByCourseId(courseId);
+        List<String> missingStudents = new java.util.ArrayList<>();
+        for (Enrollment enrollment : enrollments) {
+            Grade grade = gradeRepository.findByEnrollmentId(enrollment.getId()).orElse(null);
+            if (grade == null || grade.getMidtermScore() == null) {
+                missingStudents.add(enrollment.getStudent().getStudentCode() + " - " + enrollment.getStudent().getUser().getFullName());
+            }
+        }
+        if (!missingStudents.isEmpty()) {
+            throw new RuntimeException("Không thể chốt điểm giữa kỳ! Vẫn còn " + missingStudents.size() + " sinh viên chưa được nhập điểm giữa kỳ: " + String.join(", ", missingStudents) + ". Vui lòng hoàn tất nhập điểm trước khi chốt.");
+        }
 
         submission.setStatus("SUBMITTED");
         submission.setSubmittedAt(LocalDateTime.now());
@@ -240,6 +276,22 @@ public class GradeService {
 
         GradeSubmission finalSub = gradeSubmissionRepository.findByCourseIdAndGradeType(courseId, "FINAL")
                 .orElseThrow(() -> new RuntimeException("Lỗi dữ liệu: Không tìm thấy trạng thái chốt điểm cuối kỳ của lớp học phần này. Vui lòng liên hệ Admin để xử lý."));
+
+        if ("SUBMITTED".equals(finalSub.getStatus())) {
+            throw new RuntimeException("Điểm cuối kỳ của lớp học phần này đã được chốt và gửi Ban đào tạo trước đó, không thể chốt lại!");
+        }
+
+        List<Enrollment> enrollments = enrollmentRepository.findByCourseId(courseId);
+        List<String> missingStudents = new java.util.ArrayList<>();
+        for (Enrollment enrollment : enrollments) {
+            Grade grade = gradeRepository.findByEnrollmentId(enrollment.getId()).orElse(null);
+            if (grade == null || grade.getFinalScore() == null) {
+                missingStudents.add(enrollment.getStudent().getStudentCode() + " - " + enrollment.getStudent().getUser().getFullName());
+            }
+        }
+        if (!missingStudents.isEmpty()) {
+            throw new RuntimeException("Không thể chốt điểm cuối kỳ! Vẫn còn " + missingStudents.size() + " sinh viên chưa được nhập điểm cuối kỳ: " + String.join(", ", missingStudents) + ". Vui lòng hoàn tất nhập điểm trước khi chốt.");
+        }
 
         finalSub.setStatus("SUBMITTED");
         finalSub.setSubmittedAt(LocalDateTime.now());
@@ -398,6 +450,8 @@ public class GradeService {
 
     @Transactional
     public void importGradesFromExcel(Long courseId, MultipartFile file) {
+        ExcelSecurityUtil.validateExcelFile(file, 5 * 1024 * 1024);
+
         Lecturer currentLecturer = getCurrentLecturer();
         verifyCourseOwnership(courseId, currentLecturer);
 
@@ -422,6 +476,7 @@ public class GradeService {
 
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
+                int rowNum = currentRow.getRowNum() + 1;
                 Cell cell0 = currentRow.getCell(0);
                 if (cell0 == null) continue;
                 
@@ -450,17 +505,17 @@ public class GradeService {
                         });
 
                 Cell midtermCell = currentRow.getCell(2);
-                if (!midtermLocked && midtermCell != null && midtermCell.getCellType() == CellType.NUMERIC) {
-                    double midtermScore = midtermCell.getNumericCellValue();
-                    if (midtermScore >= 0 && midtermScore <= 10) {
+                if (!midtermLocked && midtermCell != null) {
+                    Double midtermScore = parseAndValidateScore(midtermCell, rowNum, finalStudentCode, "Điểm giữa kỳ");
+                    if (midtermScore != null) {
                         grade.setMidtermScore(midtermScore);
                     }
                 }
 
                 Cell finalCell = currentRow.getCell(3);
-                if (!finalLocked && finalCell != null && finalCell.getCellType() == CellType.NUMERIC) {
-                    double finalScore = finalCell.getNumericCellValue();
-                    if (finalScore >= 0 && finalScore <= 10) {
+                if (!finalLocked && finalCell != null) {
+                    Double finalScore = parseAndValidateScore(finalCell, rowNum, finalStudentCode, "Điểm cuối kỳ");
+                    if (finalScore != null) {
                         grade.setFinalScore(finalScore);
                     }
                 }
@@ -473,9 +528,33 @@ public class GradeService {
 
                 gradeRepository.save(grade);
             }
+        } catch (RuntimeException re) {
+            throw re;
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse Excel file: " + e.getMessage());
         }
+    }
+
+    private Double parseAndValidateScore(Cell cell, int rowNum, String studentCode, String examName) {
+        if (cell == null || cell.getCellType() == CellType.BLANK) return null;
+        Double score = null;
+        if (cell.getCellType() == CellType.NUMERIC) {
+            score = cell.getNumericCellValue();
+        } else if (cell.getCellType() == CellType.STRING) {
+            String str = cell.getStringCellValue().trim();
+            if (str.isEmpty()) return null;
+            try {
+                score = Double.parseDouble(str);
+            } catch (NumberFormatException e) {
+                throw new RuntimeException("Lỗi dòng " + rowNum + " (Sinh viên " + studentCode + "): " + examName + " '" + str + "' không phải là số hợp lệ");
+            }
+        }
+        if (score != null) {
+            if (score < 0 || score > 10) {
+                throw new RuntimeException("Lỗi dòng " + rowNum + " (Sinh viên " + studentCode + "): " + examName + " (" + score + ") không hợp lệ. Điểm phải từ 0.0 đến 10.0");
+            }
+        }
+        return score;
     }
 
     @Transactional

@@ -67,18 +67,33 @@ public class DataSeederService {
         List<PreRegistration> preRegistrationsToSave = new ArrayList<>();
 
         for (int i = 0; i < numStudents; i++) {
-            String uniqueId = UUID.randomUUID().toString().substring(0, 8);
-            
-            User user = new User();
-            user.setFullName("Dummy Student " + uniqueId);
-            user.setEmail("dummy_" + uniqueId + "@school.edu.vn");
+            int index = i + 1;
+            String email = "test" + index + "@gmail.com";
+            String studentCode = "TEST_" + index;
+
+            User user = userRepository.findByEmail(email).orElse(null);
+            Student student = null;
+            if (user != null) {
+                student = studentRepository.findByUserId(user.getId()).orElse(null);
+            } else {
+                user = new User();
+                user.setEmail(email);
+            }
+            user.setFullName("Test Student " + index);
             user.setPassword(defaultPasswordHash);
             user.setRole(Role.STUDENT);
             usersToSave.add(user);
 
-            Student student = new Student();
+            if (student == null) {
+                student = studentRepository.findByStudentCode(studentCode).orElse(new Student());
+            } else if (student.getId() != null) {
+                List<PreRegistration> existingPrs = preRegistrationRepository.findByStudentId(student.getId());
+                if (!existingPrs.isEmpty()) {
+                    preRegistrationRepository.deleteAll(existingPrs);
+                }
+            }
             student.setUser(user);
-            student.setStudentCode("DUMMY_" + uniqueId);
+            student.setStudentCode(studentCode);
             student.setDepartment(department);
             studentsToSave.add(student);
 
@@ -131,17 +146,17 @@ public class DataSeederService {
         studentRepository.saveAll(studentsToSave);
         preRegistrationRepository.saveAll(preRegistrationsToSave);
 
-        return "Đã tạo thành công " + numStudents + " sinh viên ảo và " + preRegistrationsToSave.size() + " bản ghi nguyện vọng.";
+        return "Đã tạo thành công " + numStudents + " sinh viên test (test1@gmail.com -> test" + numStudents + "@gmail.com) và " + preRegistrationsToSave.size() + " bản ghi nguyện vọng.";
     }
 
     @Transactional
     public String clearSeedData() {
         List<Student> dummyStudents = studentRepository.findAll().stream()
-                .filter(s -> s.getStudentCode() != null && s.getStudentCode().startsWith("DUMMY_"))
+                .filter(s -> s.getStudentCode() != null && (s.getStudentCode().startsWith("DUMMY_") || s.getStudentCode().startsWith("TEST_")))
                 .toList();
 
         if (dummyStudents.isEmpty()) {
-            return "Không tìm thấy dữ liệu giả lập nào để xóa.";
+            return "Không tìm thấy dữ liệu giả lập/test nào để xóa.";
         }
 
         int studentCount = dummyStudents.size();
@@ -153,9 +168,11 @@ public class DataSeederService {
             preRegistrationRepository.deleteAll(prs);
             
             studentRepository.delete(student);
-            userRepository.delete(student.getUser());
+            if (student.getUser() != null) {
+                userRepository.delete(student.getUser());
+            }
         }
 
-        return "Đã xóa thành công " + studentCount + " sinh viên ảo và " + preRegCount + " bản ghi nguyện vọng.";
+        return "Đã xóa thành công " + studentCount + " sinh viên test và " + preRegCount + " bản ghi nguyện vọng.";
     }
 }

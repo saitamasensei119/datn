@@ -5,6 +5,7 @@ import com.datct.datn.auth.entity.RefreshToken;
 import com.datct.datn.auth.jwt.JwtService;
 import com.datct.datn.auth.repository.RefreshTokenRepository;
 import com.datct.datn.common.service.EmailService;
+import com.datct.datn.common.util.TokenHashUtil;
 import com.datct.datn.modules.lecturer.repository.LecturerRepository;
 import com.datct.datn.modules.student.repository.StudentRepository;
 import com.datct.datn.modules.user.entity.PasswordResetToken;
@@ -34,12 +35,12 @@ public class AuthService {
     private final IpRateLimitingService ipRateLimitingService;
     private final GoogleRecaptchaService googleRecaptchaService;
 
-    @Transactional
+    @Transactional(noRollbackFor = {RuntimeException.class, Exception.class})
     public LoginResponse login(LoginRequest request) {
         return login(request, "unknown");
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {RuntimeException.class, Exception.class})
     public LoginResponse login(LoginRequest request, String clientIp) {
         // 1. Kiểm tra khóa theo địa chỉ IP (Layer 1 - In-Memory Cache)
         if (ipRateLimitingService.isBlocked(clientIp)) {
@@ -101,9 +102,9 @@ public class AuthService {
         String accessToken = jwtService.generateAccessToken(user);
         String refreshTokenStr = jwtService.generateRefreshToken(user);
 
-        // Lưu RefreshToken vào DB
+        // Lưu RefreshToken (dưới dạng Hash SHA-256) vào DB
         RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setToken(refreshTokenStr);
+        refreshToken.setToken(TokenHashUtil.sha256(refreshTokenStr));
         refreshToken.setUser(user);
         refreshToken.setExpiryDate(LocalDateTime.now().plusDays(7));
         refreshToken.setRevoked(false);
@@ -126,7 +127,8 @@ public class AuthService {
             throw new RuntimeException("Refresh token không hợp lệ");
         }
 
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(tokenStr)
+        String hashedToken = TokenHashUtil.sha256(tokenStr);
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(hashedToken)
                 .orElseThrow(() -> new RuntimeException("Refresh token không tồn tại hoặc đã quá hạn"));
 
         // CẢNH BÁO BẢO MẬT: Nếu Token này đã bị thu hồi (revoked = true) mà lại được gửi lên xin cấp mới
@@ -145,13 +147,12 @@ public class AuthService {
         String newAccessToken = jwtService.generateAccessToken(user);
         String newRefreshTokenStr = jwtService.generateRefreshToken(user);
 
-        // Đánh dấu token cũ đã bị thu hồi (chứ không ghi đè) để giữ dấu vết chống Replay Attack
-        refreshToken.setRevoked(true);
-        refreshTokenRepository.save(refreshToken);
+        // Xóa token cũ khỏi DB khi xoay vòng sang token mới
+        refreshTokenRepository.delete(refreshToken);
 
-        // Tạo bản ghi RefreshToken mới cho phiên xoay vòng
+        // Tạo bản ghi RefreshToken mới (dưới dạng Hash SHA-256) cho phiên xoay vòng
         RefreshToken newRefreshToken = new RefreshToken();
-        newRefreshToken.setToken(newRefreshTokenStr);
+        newRefreshToken.setToken(TokenHashUtil.sha256(newRefreshTokenStr));
         newRefreshToken.setUser(user);
         newRefreshToken.setExpiryDate(LocalDateTime.now().plusDays(7));
         newRefreshToken.setRevoked(false);
@@ -165,11 +166,9 @@ public class AuthService {
         if (request == null || request.getRefreshToken() == null) {
             return;
         }
-        refreshTokenRepository.findByToken(request.getRefreshToken())
-                .ifPresent(token -> {
-                    token.setRevoked(true);
-                    refreshTokenRepository.save(token);
-                });
+        String hashedToken = TokenHashUtil.sha256(request.getRefreshToken());
+        refreshTokenRepository.findByToken(hashedToken)
+                .ifPresent(refreshTokenRepository::delete);
     }
 
     @Transactional

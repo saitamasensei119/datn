@@ -3,6 +3,7 @@ package com.datct.datn.modules.user.controller;
 import com.datct.datn.modules.user.DTO.CreateUserRequest;
 import com.datct.datn.modules.user.DTO.UserResponse;
 import com.datct.datn.modules.user.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,7 +19,7 @@ public class AdminUserController {
 
     @PostMapping
     public UserResponse createUser(
-            @RequestBody CreateUserRequest request
+            @Valid @RequestBody CreateUserRequest request
     ) {
 
         return userService.createUser(request);

@@ -22,7 +22,8 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 500)
+    // Lưu trữ mã băm SHA-256 (64 ký tự Hex) của Refresh Token gốc để tối ưu B-Tree Index và bảo mật
+    @Column(nullable = false, unique = true, length = 64)
     private String token;
 
     @ManyToOne(fetch = FetchType.LAZY)

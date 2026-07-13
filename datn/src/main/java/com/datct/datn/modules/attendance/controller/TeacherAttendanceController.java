@@ -4,8 +4,10 @@ import com.datct.datn.modules.attendance.DTO.AttendanceRecordDTO;
 import com.datct.datn.modules.attendance.DTO.AttendanceSessionDTO;
 import com.datct.datn.modules.attendance.DTO.UpdateAttendanceRecordsRequest;
 import com.datct.datn.modules.attendance.service.TeacherAttendanceService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -14,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/teacher")
 @RequiredArgsConstructor
+@Validated
 public class TeacherAttendanceController {
 
     private final TeacherAttendanceService teacherAttendanceService;
@@ -38,7 +41,7 @@ public class TeacherAttendanceController {
     @PutMapping("/attendance-sessions/{sessionId}/records")
     public void updateRecords(
             @PathVariable Long sessionId,
-            @RequestBody UpdateAttendanceRecordsRequest request) {
+            @Valid @RequestBody UpdateAttendanceRecordsRequest request) {
         teacherAttendanceService.updateRecords(sessionId, request);
     }
 }

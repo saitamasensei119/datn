@@ -19,9 +19,17 @@ public class UserService {
     public UserResponse createUser(
             CreateUserRequest request
     ) {
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            throw new RuntimeException("Email không được để trống");
+        }
+
+        String cleanEmail = request.getEmail().trim().toLowerCase();
+        if (!cleanEmail.matches("^[A-Za-z0-9+_.-]+@([A-Za-z0-9.-]+\\.[A-Za-z]{2,})$")) {
+            throw new RuntimeException("Định dạng email không hợp lệ: " + cleanEmail);
+        }
 
         boolean exists = userRepository
-                .findByEmail(request.getEmail())
+                .findByEmail(cleanEmail)
                 .isPresent();
 
         if (exists) {
@@ -32,9 +40,9 @@ public class UserService {
 
         User user = new User();
 
-        user.setFullName(request.getFullName());
+        user.setFullName(request.getFullName() != null ? request.getFullName().trim() : "");
 
-        user.setEmail(request.getEmail());
+        user.setEmail(cleanEmail);
 
         user.setPassword(
                 passwordEncoder.encode(

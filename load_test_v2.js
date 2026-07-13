@@ -31,7 +31,7 @@ const BASE_URL = 'http://localhost:8080';
 
 // Tài khoản sinh viên mẫu — email format: SV{i}@student.edu.vn, password mặc định
 // Hệ thống sẽ thử đăng nhập từng tài khoản trước khi test
-const STUDENT_EMAIL_PATTERN = 'student{i}@gmail.com'; // Thay theo pattern email sinh viên trong DB
+const STUDENT_EMAIL_PATTERN = 'test{i}@gmail.com'; // Thay theo pattern email sinh viên trong DB
 const STUDENT_PASSWORD = '123456';                     // Password mặc định
 
 // Admin fallback (nếu không login được sinh viên)

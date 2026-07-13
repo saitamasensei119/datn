@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.datct.datn.modules.enrollment.service.EnrollmentProducer;
+import com.datct.datn.modules.enrollment.service.RedisSlotService;
 import org.springframework.http.HttpStatus;
 
 @RestController
@@ -16,6 +17,7 @@ public class AdminEnrollmentController {
 
     private final EnrollmentService enrollmentService;
     private final EnrollmentProducer enrollmentProducer;
+    private final RedisSlotService redisSlotService;
 
     @PostMapping
     public ResponseEntity<String> enroll(
@@ -29,6 +31,9 @@ public class AdminEnrollmentController {
     public ResponseEntity<String> enrollAsync(
             @RequestBody EnrollmentRequest request
     ) {
+        if (!redisSlotService.tryAcquireSlot(request.getCourseId())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Lớp học phần đã đầy! (Khước từ tại cổng Redis API Gateway)");
+        }
         enrollmentProducer.sendEnrollmentRequest(request.getStudentId(), request.getCourseId(), request.isIgnoreWarning());
         return ResponseEntity.status(HttpStatus.ACCEPTED).body("Đơn đăng ký đang được xử lý (RabbitMQ)");
     }

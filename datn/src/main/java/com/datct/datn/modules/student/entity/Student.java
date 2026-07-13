@@ -41,7 +41,7 @@ public class Student {
     @Enumerated(EnumType.STRING)
     private StudentStatus status = StudentStatus.ACTIVE;
 
-    @Column(name = "personal_email")
+    @Column(name = "personal_email", unique = true)
     private String personalEmail;
 
     @Column(name = "phone_number", length = 20)

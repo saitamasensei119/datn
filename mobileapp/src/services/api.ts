@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Replace with your local machine's IP address where Spring Boot is running
 export const BASE_URL = "http://192.168.0.102:8080"; 
-// const BASE_URL = "http://192.168.91.128:8080"; 
+// const BASE_URL = "http://192.168.107.60:8080"; 
 const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,

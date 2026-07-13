@@ -1,5 +1,6 @@
 package com.datct.datn.config;
 
+import com.datct.datn.auth.filter.EnrollmentRateLimitFilter;
 import com.datct.datn.auth.jwt.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -18,6 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final EnrollmentRateLimitFilter enrollmentRateLimitFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -74,6 +76,10 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class
+                )
+                .addFilterAfter(
+                        enrollmentRateLimitFilter,
+                        JwtAuthenticationFilter.class
                 );
 
         return http.build();

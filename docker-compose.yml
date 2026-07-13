@@ -1,0 +1,50 @@
+services:
+  backend:
+    build:
+      context: ./datn
+      dockerfile: Dockerfile
+    container_name: datn-backend
+    ports:
+      - "8080:8080"
+    environment:
+      # Tự động trỏ kết nối DB, RabbitMQ và Redis về máy Host Windows thông qua host.docker.internal
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/DATN
+      - SPRING_RABBITMQ_HOST=host.docker.internal
+      - SPRING_DATA_REDIS_HOST=host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  enrollment-worker:
+    build:
+      context: ./enrollment-service
+      dockerfile: Dockerfile
+    container_name: datn-enrollment-worker
+    ports:
+      - "8081:8081"
+    environment:
+      # Tự động trỏ kết nối DB, RabbitMQ và Redis về máy Host Windows thông qua host.docker.internal
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/DATN
+      - SPRING_RABBITMQ_HOST=host.docker.internal
+      - SPRING_DATA_REDIS_HOST=host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: datn-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: datn-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+    restart: unless-stopped

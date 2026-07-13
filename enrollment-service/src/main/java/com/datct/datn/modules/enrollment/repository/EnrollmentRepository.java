@@ -24,6 +24,30 @@ public interface EnrollmentRepository
             Long courseId
     );
 
+    @Query("""
+        SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
+        FROM Enrollment e
+        WHERE e.student.id = :studentId
+          AND e.course.subject.id = :subjectId
+          AND e.course.semester.id = :semesterId
+    """)
+    boolean existsByStudentIdAndSubjectIdAndSemesterId(
+            @org.springframework.data.repository.query.Param("studentId") Long studentId,
+            @org.springframework.data.repository.query.Param("subjectId") Long subjectId,
+            @org.springframework.data.repository.query.Param("semesterId") Long semesterId
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(e.course.subject.credits), 0)
+        FROM Enrollment e
+        WHERE e.student.id = :studentId
+          AND e.course.semester.id = :semesterId
+    """)
+    Integer sumCreditsByStudentIdAndSemesterId(
+            @org.springframework.data.repository.query.Param("studentId") Long studentId,
+            @org.springframework.data.repository.query.Param("semesterId") Long semesterId
+    );
+
     long countByCourseId(Long courseId);
     List<Enrollment> findByStudentId(Long studentId);
     List<Enrollment> findByCourseId(Long courseId);

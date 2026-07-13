@@ -9,6 +9,7 @@ import com.datct.datn.modules.student.DTO.StudentResponse;
 import com.datct.datn.modules.student.DTO.StudentStatusCountResponse;
 import com.datct.datn.modules.student.entity.Student;
 import com.datct.datn.modules.student.entity.StudentStatus;
+import com.datct.datn.modules.lecturer.repository.LecturerRepository;
 import com.datct.datn.modules.student.repository.StudentRepository;
 import com.datct.datn.modules.user.entity.Department;
 import com.datct.datn.modules.user.entity.Role;
@@ -33,7 +34,9 @@ public class StudentService {
     private final PasswordEncoder passwordEncoder;
 
     private final DepartmentRepository departmentRepository;
-        @Transactional
+    private final LecturerRepository lecturerRepository;
+
+    @Transactional
         public StudentResponse create(StudentRequest request) {
 
             // 1️⃣ Kiểm tra email đã tồn tại chưa
@@ -59,7 +62,7 @@ public class StudentService {
             student.setStudentCode(request.getStudentCode());
             student.setUser(savedUser);
             student.setDepartment(department);
-            student.setPersonalEmail(request.getPersonalEmail());
+            student.setPersonalEmail(validateAndNormalizePersonalEmail(request.getPersonalEmail(), null));
             student.setPhoneNumber(request.getPhoneNumber());
 
             Student savedStudent = studentRepository.save(student);
@@ -128,7 +131,7 @@ public class StudentService {
         student.setDepartment(department);
 
         student.setStatus(request.getStatus());
-        student.setPersonalEmail(request.getPersonalEmail());
+        student.setPersonalEmail(validateAndNormalizePersonalEmail(request.getPersonalEmail(), student.getId()));
         student.setPhoneNumber(request.getPhoneNumber());
 
         // update user
@@ -207,74 +210,25 @@ public class StudentService {
         return studentPage.map(this::mapToResponse);
     }
 
-    @Transactional
-    public StudentResponse updateMyProfile(
-            StudentRequest request
-    ) {
 
-        Authentication authentication =
-                SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
-
-        CustomUserDetails userDetails =
-                (CustomUserDetails)
-                        authentication.getPrincipal();
-
-        User currentUser =
-                userDetails.getUser();
-
-        Student student =
-                studentRepository
-                        .findByUserId(
-                                currentUser.getId()
-                        )
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Student not found"
-                                )
-                        );
-
-        currentUser.setFullName(
-                request.getFullName()
-        );
-
-
-        userRepository.save(currentUser);
-
-        student.setPersonalEmail(request.getPersonalEmail());
-        student.setPhoneNumber(request.getPhoneNumber());
-        student = studentRepository.save(student);
-
-        return mapToResponse(student);
+    private String validateAndNormalizePersonalEmail(String personalEmail, Long currentStudentId) {
+        String normalizedEmail = (personalEmail != null && !personalEmail.trim().isEmpty())
+                ? personalEmail.trim() : null;
+        if (normalizedEmail != null) {
+            if (userRepository.findByEmail(normalizedEmail).isPresent()) {
+                throw new RuntimeException("Email cá nhân này đã bị trùng với email đăng nhập của một tài khoản khác trong hệ thống");
+            }
+            if (currentStudentId == null) {
+                if (studentRepository.existsByPersonalEmail(normalizedEmail) || lecturerRepository.existsByPersonalEmail(normalizedEmail)) {
+                    throw new RuntimeException("Email cá nhân này đã được sử dụng cho một tài khoản khác trong hệ thống");
+                }
+            } else {
+                if (studentRepository.existsByPersonalEmailAndIdNot(normalizedEmail, currentStudentId) || lecturerRepository.existsByPersonalEmail(normalizedEmail)) {
+                    throw new RuntimeException("Email cá nhân này đã được sử dụng cho một tài khoản khác trong hệ thống");
+                }
+            }
+        }
+        return normalizedEmail;
     }
-
-    @Transactional(readOnly = true)
-    public StudentResponse getMyProfile() {
-
-        Authentication authentication =
-                SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
-
-        CustomUserDetails userDetails =
-                (CustomUserDetails)
-                        authentication.getPrincipal();
-
-        Long userId =
-                userDetails.getUser().getId();
-
-        Student student =
-                studentRepository.findByUserId(userId)
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Lecturer not found"
-                                )
-                        );
-
-        return mapToResponse(student);
-    }
-
-
 }
 

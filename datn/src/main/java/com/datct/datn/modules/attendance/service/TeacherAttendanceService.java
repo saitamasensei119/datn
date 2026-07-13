@@ -11,6 +11,11 @@ import com.datct.datn.modules.course.entity.Course;
 import com.datct.datn.modules.course.repository.CourseRepository;
 import com.datct.datn.modules.enrollment.entity.Enrollment;
 import com.datct.datn.modules.enrollment.repository.EnrollmentRepository;
+import com.datct.datn.modules.lecturer.entity.Lecturer;
+import com.datct.datn.modules.lecturer.repository.LecturerRepository;
+import com.datct.datn.auth.CustomUserDetails;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +34,37 @@ public class TeacherAttendanceService {
     private final AttendanceRecordRepository attendanceRecordRepository;
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final LecturerRepository lecturerRepository;
+
+    private Lecturer getCurrentLecturer() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long userId = userDetails.getUser().getId();
+        return lecturerRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
+    }
+
+    private void verifyCourseOwnership(Long courseId, Lecturer lecturer) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+        if (course.getLecturer() == null || !course.getLecturer().getId().equals(lecturer.getId())) {
+            throw new RuntimeException("You do not have permission to manage this course");
+        }
+    }
+
+    private AttendanceSession verifySessionOwnership(Long sessionId, Lecturer lecturer) {
+        AttendanceSession session = attendanceSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Attendance session not found"));
+        if (session.getCourse() == null || session.getCourse().getLecturer() == null ||
+                !session.getCourse().getLecturer().getId().equals(lecturer.getId())) {
+            throw new RuntimeException("You do not have permission to manage this attendance session");
+        }
+        return session;
+    }
 
     @Transactional(readOnly = true)
     public List<AttendanceSessionDTO> getSessionsByCourse(Long courseId) {
+        verifyCourseOwnership(courseId, getCurrentLecturer());
         return attendanceSessionRepository.findByCourseIdOrderBySessionDateDesc(courseId).stream()
                 .map(this::mapToSessionDTO)
                 .collect(Collectors.toList());
@@ -39,6 +72,7 @@ public class TeacherAttendanceService {
 
     @Transactional
     public AttendanceSessionDTO getOrCreateSession(Long courseId, LocalDate date) {
+        verifyCourseOwnership(courseId, getCurrentLecturer());
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
 
@@ -78,6 +112,7 @@ public class TeacherAttendanceService {
 
     @Transactional(readOnly = true)
     public List<AttendanceRecordDTO> getRecordsBySession(Long sessionId) {
+        verifySessionOwnership(sessionId, getCurrentLecturer());
         return attendanceRecordRepository.findByAttendanceSessionId(sessionId).stream()
                 .map(this::mapToRecordDTO)
                 .collect(Collectors.toList());
@@ -85,10 +120,21 @@ public class TeacherAttendanceService {
 
     @Transactional
     public void updateRecords(Long sessionId, UpdateAttendanceRecordsRequest request) {
-        AttendanceSession session = attendanceSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Session not found"));
+        if (request == null || request.getRecords() == null || request.getRecords().isEmpty()) {
+            throw new RuntimeException("Danh sách cập nhật điểm danh không được để trống");
+        }
+
+        AttendanceSession session = verifySessionOwnership(sessionId, getCurrentLecturer());
+        List<String> validStatuses = List.of("PRESENT", "ABSENT", "LATE", "EXCUSED");
 
         for (UpdateAttendanceRecordsRequest.AttendanceRecordUpdateRequest update : request.getRecords()) {
+            if (update.getRecordId() == null) {
+                throw new RuntimeException("ID bản ghi điểm danh không được để trống");
+            }
+            if (update.getStatus() == null || !validStatuses.contains(update.getStatus())) {
+                throw new RuntimeException("Trạng thái điểm danh không hợp lệ: " + update.getStatus() + ". Chỉ chấp nhận: PRESENT, ABSENT, LATE, EXCUSED");
+            }
+
             AttendanceRecord record = attendanceRecordRepository.findById(update.getRecordId())
                     .orElseThrow(() -> new RuntimeException("Record not found: " + update.getRecordId()));
 

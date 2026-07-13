@@ -70,6 +70,7 @@ D:\datn\enrollment-service\src\main\java\com\datct\datn\modules\enrollment\servi
 D:\datn\enrollment-service\src\main\java\com\datct\datn\modules\enrollment\service\EnrollmentProducer.java
 D:\datn\enrollment-service\src\main\java\com\datct\datn\modules\enrollment\service\EnrollmentService.java
 D:\datn\enrollment-service\src\main\java\com\datct\datn\modules\enrollment\service\PreRegistrationService.java
+D:\datn\enrollment-service\src\main\java\com\datct\datn\modules\enrollment\service\RedisSlotService.java
 D:\datn\enrollment-service\src\main\java\com\datct\datn\modules\grade\controller\StudentGradeController.java
 D:\datn\enrollment-service\src\main\java\com\datct\datn\modules\grade\controller\TeacherGradeController.java
 D:\datn\enrollment-service\src\main\java\com\datct\datn\modules\grade\DTO\GradeSubmissionResponse.java

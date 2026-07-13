@@ -14,4 +14,7 @@ public interface LecturerRepository
             String lecturerCode
     );
     Optional<Lecturer> findByUserId(Long userId);
+
+    boolean existsByPersonalEmail(String personalEmail);
+    boolean existsByPersonalEmailAndIdNot(String personalEmail, Long id);
 }

@@ -186,6 +186,7 @@ com\datct\datn\modules\subject\DTO\CreateSubjectConditionRequest.class
 com\datct\datn\modules\enrollment\controller\AdminEnrollmentController.class
 com\datct\datn\modules\subject\service\SubjectImportService$1.class
 com\datct\datn\modules\course\entity\SemesterStatus.class
+com\datct\datn\modules\enrollment\service\RedisSlotService.class
 com\datct\datn\modules\enrollment\entity\PreRegistration.class
 com\datct\datn\modules\timetable\DTO\ClassScheduleResponse.class
 com\datct\datn\modules\timetable\service\TimetableService.class
